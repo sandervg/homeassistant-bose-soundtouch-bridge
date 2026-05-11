@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1
+
+- Fix add-on options validation when using only `speakers` (root preset fields are now truly optional).
+
 ## 1.6.0
 
 - Multi-speaker support via a `speakers` list in add-on configuration (one WebSocket thread per speaker).
