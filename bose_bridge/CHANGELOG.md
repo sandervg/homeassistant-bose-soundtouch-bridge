@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0
+
+- Multi-speaker support via a `speakers` list in add-on configuration (one WebSocket thread per speaker).
+- MQTT command handling now supports multiple devices.
+
 ## 1.5.1
 
 - More robust XML parsing for speaker info and preset state (with regex fallback).
