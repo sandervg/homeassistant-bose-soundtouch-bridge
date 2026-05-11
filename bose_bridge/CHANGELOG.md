@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1
+
+- More robust XML parsing for speaker info and preset state (with regex fallback).
+- Sync now restores previous mute/volume state after writing presets.
+- Pinned Python dependency versions in Docker images for reproducible builds.
+
 ## 1.5.0
 
 - **Standalone Docker image** for Home Assistant Container / plain

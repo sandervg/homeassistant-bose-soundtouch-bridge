@@ -45,6 +45,52 @@ SSDP_TARGET = "urn:schemas-upnp-org:device:MediaRenderer:1"
 
 # ---------- config ---------------------------------------------------------
 
+def _parse_xml(text: str) -> _ET.Element | None:
+    try:
+        return _ET.fromstring(text.strip())
+    except Exception:
+        return None
+
+
+def _find_first_text(root: _ET.Element, local_tag: str) -> str | None:
+    for el in root.iter():
+        if el.tag.split("}")[-1] == local_tag and el.text:
+            return el.text
+    return None
+
+
+def _coerce_bool01(v) -> str | None:
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    if s in ("1", "true", "yes", "on"):
+        return "1"
+    if s in ("0", "false", "no", "off"):
+        return "0"
+    return None
+
+
+def _parse_ws_preset_id(msg: str) -> int | None:
+    root = _parse_xml(msg)
+    if root is not None:
+        preset_el = next(
+            (e for e in root.iter() if e.tag.split("}")[-1] == "preset" and e.get("id")),
+            None,
+        )
+        if preset_el is not None:
+            try:
+                return int(preset_el.get("id"))
+            except Exception:
+                return None
+    m = PRESET_RE.search(msg)
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
+
+
 
 def load_options() -> dict:
     """Read config. In Supervisor (HAOS / Supervised) the add-on options arrive
@@ -104,10 +150,24 @@ def fetch_speaker_info(host: str) -> tuple[str, str, str]:
     """Return (device_id, friendly_name, model) by hitting /info."""
     with urllib.request.urlopen(f"http://{host}:8090/info", timeout=5) as r:
         info = r.read().decode()
-    device_id = re.search(r'deviceID="([0-9A-F]+)"', info).group(1)
-    name = re.search(r"<name>([^<]+)</name>", info)
-    model = re.search(r"<type>([^<]+)</type>", info)
-    return device_id, (name.group(1) if name else "SoundTouch"), (model.group(1) if model else "SoundTouch")
+    device_id = None
+    friendly = "SoundTouch"
+    model = "SoundTouch"
+
+    root = _parse_xml(info)
+    if root is not None:
+        device_id = root.attrib.get("deviceID") or None
+        friendly = _find_first_text(root, "name") or friendly
+        model = _find_first_text(root, "type") or model
+
+    if not device_id:
+        m = re.search(r'deviceID="([0-9A-F]+)"', info)
+        device_id = m.group(1) if m else None
+
+    if not device_id:
+        raise ValueError("unable to parse deviceID from /info response")
+
+    return device_id, friendly, model
 
 
 def get_upnp_services(host: str, device_id: str):
@@ -188,6 +248,21 @@ def _current_preset_url(host: str, n: int) -> str | None:
             xml = r.read().decode()
     except Exception:
         return None
+    root = _parse_xml(xml)
+    if root is not None:
+        preset_el = next(
+            (p for p in root.iter() if p.tag.split("}")[-1] == "preset" and p.get("id") == str(n)),
+            None,
+        )
+        if preset_el is None:
+            return None
+        content_el = next(
+            (e for e in preset_el.iter() if e.tag.split("}")[-1].lower() == "contentitem" and e.get("location")),
+            None,
+        )
+        if content_el is not None:
+            return content_el.get("location")
+
     m = re.search(rf'<preset id="{n}"[^>]*>(.*?)</preset>', xml, re.DOTALL)
     if not m:
         return None
@@ -206,8 +281,24 @@ def sync_presets(host: str, av, rc, presets: dict):
         return
     print(f"[sync] {len(needed)}/{len(targets)} presets need writing: {sorted(needed)}")
 
-    saved_vol = int(rc.GetVolume(InstanceID=0, Channel="Master")["CurrentVolume"])
-    rc.SetMute(InstanceID=0, Channel="Master", DesiredMute="1")
+    saved_vol = None
+    saved_mute = None
+    try:
+        saved_vol = int(rc.GetVolume(InstanceID=0, Channel="Master")["CurrentVolume"])
+    except Exception:
+        pass
+    try:
+        saved_mute = _coerce_bool01(rc.GetMute(InstanceID=0, Channel="Master")["CurrentMute"])
+    except Exception:
+        pass
+
+    did_mute = False
+    try:
+        if saved_mute != "1":
+            rc.SetMute(InstanceID=0, Channel="Master", DesiredMute="1")
+            did_mute = True
+    except Exception:
+        pass
     try:
         for n, url in needed.items():
             try:
@@ -235,8 +326,17 @@ def sync_presets(host: str, av, rc, presets: dict):
         except Exception:
             pass
     finally:
-        rc.SetMute(InstanceID=0, Channel="Master", DesiredMute="0")
-        print(f"[sync] unmuted, volume {saved_vol}")
+        if did_mute:
+            try:
+                rc.SetMute(InstanceID=0, Channel="Master", DesiredMute=(saved_mute or "0"))
+            except Exception:
+                pass
+        if saved_vol is not None:
+            try:
+                rc.SetVolume(InstanceID=0, Channel="Master", DesiredVolume=str(saved_vol))
+            except Exception:
+                pass
+        print(f"[sync] restored audio state (mute={saved_mute}, volume={saved_vol})")
 
 
 # ---------- MQTT -----------------------------------------------------------
@@ -394,10 +494,9 @@ def main():
 
     # WebSocket loop ----------------------------------------------------
     def on_message(_ws, msg):
-        m = PRESET_RE.search(msg)
-        if not m:
+        n = _parse_ws_preset_id(msg)
+        if not n:
             return
-        n = int(m.group(1))
         if n == 0:
             return
         print(f"[ws] physical preset {n} press")
