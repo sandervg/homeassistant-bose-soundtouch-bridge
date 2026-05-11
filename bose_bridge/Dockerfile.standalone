@@ -1,0 +1,31 @@
+# Standalone image for running the bridge outside Home Assistant Supervisor
+# (e.g. Home Assistant Container, plain Docker, Portainer, a NAS, a Pi).
+# Inside HAOS / Supervised, use the Supervisor add-on (see `Dockerfile`).
+
+FROM python:3.12-alpine
+
+RUN apk add --no-cache libxml2 libxslt \
+ && apk add --no-cache --virtual .build-deps gcc musl-dev libxml2-dev libxslt-dev \
+ && pip install --no-cache-dir \
+        upnpclient \
+        websocket-client \
+        paho-mqtt \
+ && apk del .build-deps
+
+COPY bridge.py /bridge.py
+
+ENV BOSE_HOST=""
+ENV SYNC_PRESETS_ON_STARTUP="true"
+ENV PRESET_1_URL=""
+ENV PRESET_2_URL=""
+ENV PRESET_3_URL=""
+ENV PRESET_4_URL=""
+ENV PRESET_5_URL=""
+ENV PRESET_6_URL=""
+# MQTT (optional — leave MQTT_HOST blank to disable HA control buttons)
+ENV MQTT_HOST=""
+ENV MQTT_PORT="1883"
+ENV MQTT_USERNAME=""
+ENV MQTT_PASSWORD=""
+
+CMD ["python3", "-u", "/bridge.py"]

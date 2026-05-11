@@ -1,0 +1,40 @@
+# Example docker-compose for Home Assistant Container / plain Docker / NAS.
+# Inside HAOS / Supervised, install the add-on from the App Store instead.
+#
+# Save as `docker-compose.yml`, edit the values for your setup, then:
+#   docker compose up -d
+#
+# host networking is required so the bridge can:
+#   - receive SSDP multicast for auto-discovery
+#   - reach the speaker's UPnP port (8091) and WebSocket (8080)
+#   - talk to your local MQTT broker
+
+services:
+  bose_bridge:
+    image: ghcr.io/sandervg/bose-soundtouch-bridge:latest
+    container_name: bose-soundtouch-bridge
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      # Speaker — leave blank to auto-discover via SSDP, or set an IP.
+      BOSE_HOST: ""
+
+      # Preset URLs (icecast / direct MP3 / AAC). Leave a slot blank to skip it.
+      PRESET_1_URL: "http://icecast.vrtcdn.be/radio1-high.mp3"
+      PRESET_2_URL: "http://icecast.vrtcdn.be/ra2ovl-high.mp3"
+      PRESET_3_URL: "http://icecast.vrtcdn.be/radio1_classics-high.mp3"
+      PRESET_4_URL: "http://icecast.vrtcdn.be/stubru-high.mp3"
+      PRESET_5_URL: ""
+      PRESET_6_URL: "http://progressive-audio.vrtcdn.be/content/fixed/11_11niws-snip_hi.mp3"
+
+      # Seed the speaker's preset slots on startup so physical button presses
+      # always fire the WebSocket event. Skips slots already in the right state.
+      SYNC_PRESETS_ON_STARTUP: "true"
+
+      # MQTT — optional. If set, the bridge publishes HA discovery configs and
+      # six `button.bose_<id>_preset_N` entities auto-appear in Home Assistant.
+      # Leave MQTT_HOST blank to skip MQTT entirely.
+      MQTT_HOST: ""           # e.g. "192.168.1.10" or "mosquitto"
+      MQTT_PORT: "1883"
+      MQTT_USERNAME: ""
+      MQTT_PASSWORD: ""

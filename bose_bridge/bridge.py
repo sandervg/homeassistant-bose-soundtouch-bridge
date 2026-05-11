@@ -47,11 +47,21 @@ SSDP_TARGET = "urn:schemas-upnp-org:device:MediaRenderer:1"
 
 
 def load_options() -> dict:
-    if not os.path.exists(OPTIONS_PATH):
-        print(f"[cfg] {OPTIONS_PATH} missing — running with empty config")
-        return {}
-    with open(OPTIONS_PATH) as f:
-        return json.load(f)
+    """Read config. In Supervisor (HAOS / Supervised) the add-on options arrive
+    as JSON at /data/options.json. In standalone Docker (HA Container, plain
+    Docker, NAS, etc.) they come from environment variables."""
+    if os.path.exists(OPTIONS_PATH):
+        with open(OPTIONS_PATH) as f:
+            return json.load(f)
+    print("[cfg] /data/options.json not found — reading config from environment")
+    cfg: dict = {
+        "bose_host": os.environ.get("BOSE_HOST", "").strip(),
+        "sync_presets_on_startup":
+            os.environ.get("SYNC_PRESETS_ON_STARTUP", "true").lower() in ("1", "true", "yes", "on"),
+    }
+    for n in range(1, 7):
+        cfg[f"preset_{n}_url"] = os.environ.get(f"PRESET_{n}_URL", "").strip()
+    return cfg
 
 
 # ---------- Bose discovery -------------------------------------------------
@@ -233,18 +243,31 @@ def sync_presets(host: str, av, rc, presets: dict):
 
 
 def fetch_mqtt_creds() -> dict | None:
-    if not SUPERVISOR_TOKEN:
+    """Find MQTT broker credentials.
+    In Supervisor: ask the Supervisor's `/services/mqtt` endpoint (auto-wired
+    when the user has the MQTT integration configured in HA Core).
+    Standalone: read from MQTT_HOST / MQTT_PORT / MQTT_USERNAME / MQTT_PASSWORD
+    environment variables. Returns None if neither is available."""
+    if SUPERVISOR_TOKEN:
+        try:
+            req = urllib.request.Request(
+                f"{SUPERVISOR_URL}/services/mqtt",
+                headers={"Authorization": f"Bearer {SUPERVISOR_TOKEN}"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return json.load(r).get("data")
+        except Exception as e:
+            print(f"[mqtt] supervisor MQTT lookup failed: {e}")
+            # fall through to env vars below
+    host = os.environ.get("MQTT_HOST", "").strip()
+    if not host:
         return None
-    try:
-        req = urllib.request.Request(
-            f"{SUPERVISOR_URL}/services/mqtt",
-            headers={"Authorization": f"Bearer {SUPERVISOR_TOKEN}"},
-        )
-        with urllib.request.urlopen(req, timeout=5) as r:
-            return json.load(r).get("data")
-    except Exception as e:
-        print(f"[mqtt] cannot fetch creds: {e}")
-        return None
+    return {
+        "host": host,
+        "port": int(os.environ.get("MQTT_PORT", "1883")),
+        "username": os.environ.get("MQTT_USERNAME", ""),
+        "password": os.environ.get("MQTT_PASSWORD", ""),
+    }
 
 
 def publish_discovery(client: mqtt.Client, device_id: str, friendly: str, model: str, presets: dict):

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.0
+
+- **Standalone Docker image** for Home Assistant Container / plain
+  Docker / NAS / Pi deployments where the Supervisor isn't available.
+  Published at `ghcr.io/sandervg/bose-soundtouch-bridge:latest`
+  (multi-arch: amd64 + arm64). See `docker-compose.example.yml` and the
+  repo README.
+- `bridge.py` now reads config from environment variables
+  (`BOSE_HOST`, `PRESET_1_URL` … `PRESET_6_URL`,
+  `SYNC_PRESETS_ON_STARTUP`, `MQTT_HOST`, `MQTT_PORT`, `MQTT_USERNAME`,
+  `MQTT_PASSWORD`) when `/data/options.json` isn't present, so the
+  same code runs inside Supervisor and standalone.
+- GitHub Actions workflow builds and publishes the standalone image to
+  GHCR on every version tag.
+
 ## 1.4.0
 
 - **Auto-sync presets to the speaker on startup.** New
