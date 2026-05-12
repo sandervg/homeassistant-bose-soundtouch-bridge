@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.5
+
+- Revert `preset_N_use_icy` flag. Sending empty DIDL-Lite metadata to Bose SoundTouch via UPnP results in a blank screen and does not fallback to parsing stream ICY metadata.
+
 ## 1.6.4
 
 - Add optional per-preset `preset_N_use_icy` flag to prefer ICY “StreamTitle” metadata on the speaker (sends empty UPnP metadata instead of DIDL).

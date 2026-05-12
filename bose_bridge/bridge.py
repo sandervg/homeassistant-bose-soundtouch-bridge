@@ -255,11 +255,6 @@ def apply_preset_meta_overrides(cfg: dict, n: int, meta: dict) -> dict:
     return meta
 
 
-def should_use_icy_metadata(cfg: dict, n: int) -> bool:
-    v = cfg.get(f"preset_{n}_use_icy")
-    return bool(v)
-
-
 # ---------- preset sync ----------------------------------------------------
 
 
@@ -583,8 +578,7 @@ class SpeakerBridge:
             print(f"[play] {self.device_id} preset {n} not configured ({source})")
             return
         url = entry["url"]
-        use_icy = should_use_icy_metadata(self.cfg, n)
-        didl = "" if use_icy else build_didl(url, entry)
+        didl = build_didl(url, entry)
         with self.lock:
             print(f"[play] {self.device_id} preset {n} -> {url} ({source})")
             try:
