@@ -399,6 +399,23 @@ def fetch_mqtt_creds() -> dict | None:
     }
 
 
+class MqttPublisher:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._client: mqtt.Client | None = None
+
+    def set_client(self, client: mqtt.Client | None):
+        with self._lock:
+            self._client = client
+
+    def publish(self, topic: str, payload: str, retain: bool = True):
+        with self._lock:
+            client = self._client
+        if not client:
+            return
+        client.publish(topic, payload, qos=1, retain=retain)
+
+
 def publish_discovery(
     client: mqtt.Client,
     device_id: str,
@@ -407,7 +424,7 @@ def publish_discovery(
     presets: dict,
     availability_topic: str,
 ):
-    """Publish Home Assistant MQTT-discovery configs for the 6 preset buttons."""
+    """Publish Home Assistant MQTT-discovery configs for the 6 preset buttons + sensors."""
     device = {
         "identifiers": [f"bose_soundtouch_{device_id}"],
         "name": friendly,
@@ -433,17 +450,83 @@ def publish_discovery(
         }
         topic = f"homeassistant/button/{unique}/config"
         client.publish(topic, json.dumps(cfg), qos=1, retain=True)
-    print(f"[mqtt] published HA discovery for 6 buttons (device {device_id})")
+
+    base = f"bose_bridge/{device_id}"
+
+    ws_unique = f"bose_{device_id}_ws_connected"
+    ws_cfg = {
+        "name": "WebSocket",
+        "unique_id": ws_unique,
+        "object_id": ws_unique,
+        "state_topic": f"{base}/ws",
+        "payload_on": "online",
+        "payload_off": "offline",
+        "device_class": "connectivity",
+        "device": device,
+        "availability_topic": availability_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+    }
+    client.publish(f"homeassistant/binary_sensor/{ws_unique}/config", json.dumps(ws_cfg), qos=1, retain=True)
+
+    last_preset_unique = f"bose_{device_id}_last_preset"
+    last_preset_cfg = {
+        "name": "Last Preset",
+        "unique_id": last_preset_unique,
+        "object_id": last_preset_unique,
+        "state_topic": f"{base}/last_preset",
+        "icon": "mdi:gesture-tap-button",
+        "device": device,
+        "availability_topic": availability_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+    }
+    client.publish(f"homeassistant/sensor/{last_preset_unique}/config", json.dumps(last_preset_cfg), qos=1, retain=True)
+
+    last_time_unique = f"bose_{device_id}_last_preset_time"
+    last_time_cfg = {
+        "name": "Last Preset Time",
+        "unique_id": last_time_unique,
+        "object_id": last_time_unique,
+        "state_topic": f"{base}/last_preset_time",
+        "device_class": "timestamp",
+        "device": device,
+        "availability_topic": availability_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+    }
+    client.publish(f"homeassistant/sensor/{last_time_unique}/config", json.dumps(last_time_cfg), qos=1, retain=True)
+
+    last_error_unique = f"bose_{device_id}_last_error"
+    last_error_cfg = {
+        "name": "Last Error",
+        "unique_id": last_error_unique,
+        "object_id": last_error_unique,
+        "state_topic": f"{base}/last_error",
+        "icon": "mdi:alert-circle-outline",
+        "device": device,
+        "availability_topic": availability_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+    }
+    client.publish(f"homeassistant/sensor/{last_error_unique}/config", json.dumps(last_error_cfg), qos=1, retain=True)
+
+    print(f"[mqtt] published HA discovery (buttons + sensors) for device {device_id}")
 
 
 # ---------- main loop ------------------------------------------------------
 
 
 class SpeakerBridge:
-    def __init__(self, host: str, name_override: str | None, cfg: dict, sync_default: bool):
+    def __init__(self, host: str, name_override: str | None, cfg: dict, sync_default: bool, publisher: MqttPublisher):
         self.host = host
         self.name_override = (name_override or "").strip() or None
         self.lock = threading.Lock()
+        self.publisher = publisher
+        self.ws_connected = False
+        self.last_preset: str | None = None
+        self.last_preset_time: str | None = None
+        self.last_error: str | None = None
 
         device_id, friendly, model = fetch_speaker_info(host)
         self.device_id = device_id
@@ -475,6 +558,18 @@ class SpeakerBridge:
 
         self.ws_thread: threading.Thread | None = None
 
+    def _topic(self, suffix: str) -> str:
+        return f"bose_bridge/{self.device_id}/{suffix}"
+
+    def publish_state(self):
+        self.publisher.publish(self._topic("ws"), ("online" if self.ws_connected else "offline"))
+        if self.last_preset is not None:
+            self.publisher.publish(self._topic("last_preset"), self.last_preset)
+        if self.last_preset_time is not None:
+            self.publisher.publish(self._topic("last_preset_time"), self.last_preset_time)
+        if self.last_error is not None:
+            self.publisher.publish(self._topic("last_error"), self.last_error)
+
     def play_preset(self, n: int, source: str):
         entry = self.presets.get(n)
         if not entry:
@@ -491,8 +586,15 @@ class SpeakerBridge:
                     pass
                 self.av.SetAVTransportURI(InstanceID=0, CurrentURI=url, CurrentURIMetaData=didl)
                 self.av.Play(InstanceID=0, Speed="1")
+                label = entry.get("name") or f"Preset {n}"
+                self.last_preset = f"{n}: {label}"
+                self.last_preset_time = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                self.last_error = ""
+                self.publish_state()
             except Exception as e:
                 print(f"[play] {self.device_id} failed: {e}")
+                self.last_error = str(e)
+                self.publish_state()
 
     def start_ws(self):
         if self.ws_thread:
@@ -513,12 +615,18 @@ class SpeakerBridge:
 
         def on_open(_ws):
             print(f"[ws] {self.device_id} connected to ws://{self.host}:8080")
+            self.ws_connected = True
+            self.publish_state()
 
         def on_error(_ws, e):
             print(f"[ws] {self.device_id} error: {e}")
+            self.last_error = str(e)
+            self.publish_state()
 
         def on_close(_ws, code, reason):
             print(f"[ws] {self.device_id} closed: {code} {reason}")
+            self.ws_connected = False
+            self.publish_state()
 
         while True:
             ws = websocket.WebSocketApp(
@@ -538,6 +646,7 @@ def main():
     cfg = load_options()
     speaker_cfgs = cfg.get("speakers") or []
     sync_default = bool(cfg.get("sync_presets_on_startup", True))
+    publisher = MqttPublisher()
 
     entries: list[dict] = []
     if speaker_cfgs:
@@ -578,7 +687,7 @@ def main():
         if not host:
             continue
         try:
-            speakers.append(SpeakerBridge(host, e.get("name"), e, sync_default))
+            speakers.append(SpeakerBridge(host, e.get("name"), e, sync_default, publisher))
         except Exception as ex:
             print(f"[cfg] failed to init speaker @ {host}: {ex}")
 
@@ -602,8 +711,10 @@ def main():
 
         def on_connect(c, _u, _f, rc, _p=None):
             print(f"[mqtt] connected (rc={rc})")
+            publisher.set_client(c)
             for s in speakers:
                 publish_discovery(c, s.device_id, s.friendly, s.model, s.presets, availability_topic)
+                s.publish_state()
             c.publish(availability_topic, "online", qos=1, retain=True)
             c.subscribe("bose_bridge/+/preset/+/command")
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.3
+
+- Add Home Assistant MQTT-discovery sensors per speaker: WebSocket connectivity, last played preset + timestamp, and last error.
+
 ## 1.6.2
 
 - Allow configuring manual preset metadata (`preset_N_name`, `preset_N_favicon`) to override radio-browser results.
