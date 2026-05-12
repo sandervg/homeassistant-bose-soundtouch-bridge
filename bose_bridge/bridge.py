@@ -108,6 +108,8 @@ def load_options() -> dict:
     }
     for n in range(1, 7):
         cfg[f"preset_{n}_url"] = os.environ.get(f"PRESET_{n}_URL", "").strip()
+        cfg[f"preset_{n}_name"] = os.environ.get(f"PRESET_{n}_NAME", "").strip()
+        cfg[f"preset_{n}_favicon"] = os.environ.get(f"PRESET_{n}_FAVICON", "").strip()
     speakers_json = os.environ.get("SPEAKERS_JSON", "").strip()
     if speakers_json:
         try:
@@ -240,6 +242,16 @@ def build_didl(url: str, meta: dict) -> str:
         f'<res protocolInfo="http-get:*:audio/mpeg:*">{html.escape(url)}</res>'
         "</item></DIDL-Lite>"
     )
+
+
+def apply_preset_meta_overrides(cfg: dict, n: int, meta: dict) -> dict:
+    name = (cfg.get(f"preset_{n}_name") or "").strip()
+    if name:
+        meta["name"] = name
+    favicon = (cfg.get(f"preset_{n}_favicon") or "").strip()
+    if favicon:
+        meta["favicon"] = favicon
+    return meta
 
 
 # ---------- preset sync ----------------------------------------------------
@@ -446,6 +458,7 @@ class SpeakerBridge:
             if not url:
                 continue
             meta = lookup_station(url)
+            meta = apply_preset_meta_overrides(cfg, n, meta)
             self.presets[n] = {"url": url, **meta}
             print(f"[meta] {self.device_id} preset {n}: {url} -> {meta or '(no metadata found)'}")
 

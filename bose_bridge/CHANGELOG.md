@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2
+
+- Allow configuring manual preset metadata (`preset_N_name`, `preset_N_favicon`) to override radio-browser results.
+
 ## 1.6.1
 
 - Fix add-on options validation when using only `speakers` (root preset fields are now truly optional).

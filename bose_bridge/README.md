@@ -22,12 +22,13 @@ the firmware.
 - Press preset 2 → slot 2
 - … and so on, all six buttons
 - Configurable per-preset URLs in the add-on's **Configuration** tab
+- Supports multiple speakers from a single add-on instance (v1.6+)
 - Works with any plain HTTP/MP3 internet-radio stream (icecast, etc.)
 - No Bose cloud, no app, no rooting — pure local network
 
 ## Requirements
 
-- A Bose SoundTouch speaker (any model with the SoundTouch firmware) on
+- One or more Bose SoundTouch speakers (any model with the SoundTouch firmware) on
   the same network as Home Assistant
 - Home Assistant OS or Supervised (the add-on runs as a Docker container
   managed by the Supervisor)
@@ -36,23 +37,38 @@ the firmware.
 
 1. Install this add-on (see *Install* below).
 2. Open the add-on → **Configuration**.
-3. Either leave `bose_host` blank to auto-discover the speaker via SSDP,
-   or set it to the speaker's IP address (e.g. `192.168.1.42`).
-4. Fill in `preset_1_url` … `preset_6_url` with the stream URLs you want
-   each preset button to play. Leave any unused slots blank.
-5. Leave `sync_presets_on_startup` enabled (default). On startup, the
+3. Configure speakers:
+   - Multi-speaker (recommended): fill in `speakers:` with one entry per speaker
+     (see example below).
+   - Single-speaker (legacy): use `bose_host` + `preset_1_url` … `preset_6_url`.
+4. Leave `sync_presets_on_startup` enabled (default). On startup, the
    add-on writes each configured URL into the speaker's matching preset
    slot — required so physical button presses emit the WebSocket event
    the bridge listens for. Skip-when-equal makes restarts cheap.
-6. **Save** → **Start** → check the **Log** tab; it should print
+5. **Save** → **Start** → check the **Log** tab; it should print
    ```
-   [cfg] preset map: ...
+   [upnp] speaker: ...
    [upnp] description: http://...
-   [sync] all configured presets already match the device — skipping
-   [ws] connected to ws://...:8080
+   [ws] ... connected to ws://...:8080
    ```
 
 Press a preset button on the speaker and the radio should kick in.
+
+### Multi-speaker configuration example
+
+```yaml
+speakers:
+  - host: 192.168.1.20
+    name: Jadalnia Bose
+    sync_presets_on_startup: true
+    preset_1_url: http://live.r357.eu
+    preset_2_url: http://mp3.polskieradio.pl:8904/
+  - host: 192.168.1.90
+    name: Sypialnia Bose
+    sync_presets_on_startup: true
+    preset_1_url: http://live.r357.eu
+    preset_2_url: http://mp3.polskieradio.pl:8904/
+```
 
 For HA control: with the Mosquitto Broker add-on running and the MQTT
 integration configured in HA Core, six `button.bose_<id>_preset_N`
@@ -100,7 +116,7 @@ extra proxy and are out of scope for this add-on.
 - The speaker's display still shows whatever the original preset is set
   to — buttons trigger the bridge regardless. If you want the right name
   to show up, store any UPnP placeholder as the preset on the speaker.
-- One bridge per speaker. Multi-speaker support is on the roadmap.
+- Multi-speaker mode treats each speaker independently (no grouping / sync playback).
 
 ## License
 
