@@ -1,6 +1,6 @@
 name: "Bose SoundTouch Bridge"
 description: "Brings preset buttons back to life on Bose SoundTouch speakers after the Bose cloud retirement (2026). Maps each preset to a stream URL and pushes via local UPnP."
-version: "1.6.3"
+version: "1.6.4"
 slug: "bose_bridge"
 url: "https://github.com/kom101/homeassistant-bose-soundtouch-bridge"
 init: false
@@ -20,21 +20,27 @@ schema:
   preset_1_url: str?
   preset_1_name: str?
   preset_1_favicon: str?
+  preset_1_use_icy: bool?
   preset_2_url: str?
   preset_2_name: str?
   preset_2_favicon: str?
+  preset_2_use_icy: bool?
   preset_3_url: str?
   preset_3_name: str?
   preset_3_favicon: str?
+  preset_3_use_icy: bool?
   preset_4_url: str?
   preset_4_name: str?
   preset_4_favicon: str?
+  preset_4_use_icy: bool?
   preset_5_url: str?
   preset_5_name: str?
   preset_5_favicon: str?
+  preset_5_use_icy: bool?
   preset_6_url: str?
   preset_6_name: str?
   preset_6_favicon: str?
+  preset_6_use_icy: bool?
   speakers:
     - host: str
       name: str?
@@ -42,18 +48,24 @@ schema:
       preset_1_url: str?
       preset_1_name: str?
       preset_1_favicon: str?
+      preset_1_use_icy: bool?
       preset_2_url: str?
       preset_2_name: str?
       preset_2_favicon: str?
+      preset_2_use_icy: bool?
       preset_3_url: str?
       preset_3_name: str?
       preset_3_favicon: str?
+      preset_3_use_icy: bool?
       preset_4_url: str?
       preset_4_name: str?
       preset_4_favicon: str?
+      preset_4_use_icy: bool?
       preset_5_url: str?
       preset_5_name: str?
       preset_5_favicon: str?
+      preset_5_use_icy: bool?
       preset_6_url: str?
       preset_6_name: str?
       preset_6_favicon: str?
+      preset_6_use_icy: bool?

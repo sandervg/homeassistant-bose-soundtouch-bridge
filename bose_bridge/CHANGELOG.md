@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.4
+
+- Add optional per-preset `preset_N_use_icy` flag to prefer ICY “StreamTitle” metadata on the speaker (sends empty UPnP metadata instead of DIDL).
+
 ## 1.6.3
 
 - Add Home Assistant MQTT-discovery sensors per speaker: WebSocket connectivity, last played preset + timestamp, and last error.

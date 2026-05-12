@@ -110,6 +110,7 @@ def load_options() -> dict:
         cfg[f"preset_{n}_url"] = os.environ.get(f"PRESET_{n}_URL", "").strip()
         cfg[f"preset_{n}_name"] = os.environ.get(f"PRESET_{n}_NAME", "").strip()
         cfg[f"preset_{n}_favicon"] = os.environ.get(f"PRESET_{n}_FAVICON", "").strip()
+        cfg[f"preset_{n}_use_icy"] = os.environ.get(f"PRESET_{n}_USE_ICY", "").strip().lower() in ("1", "true", "yes", "on")
     speakers_json = os.environ.get("SPEAKERS_JSON", "").strip()
     if speakers_json:
         try:
@@ -252,6 +253,11 @@ def apply_preset_meta_overrides(cfg: dict, n: int, meta: dict) -> dict:
     if favicon:
         meta["favicon"] = favicon
     return meta
+
+
+def should_use_icy_metadata(cfg: dict, n: int) -> bool:
+    v = cfg.get(f"preset_{n}_use_icy")
+    return bool(v)
 
 
 # ---------- preset sync ----------------------------------------------------
@@ -522,6 +528,7 @@ class SpeakerBridge:
         self.host = host
         self.name_override = (name_override or "").strip() or None
         self.lock = threading.Lock()
+        self.cfg = cfg
         self.publisher = publisher
         self.ws_connected = False
         self.last_preset: str | None = None
@@ -576,7 +583,8 @@ class SpeakerBridge:
             print(f"[play] {self.device_id} preset {n} not configured ({source})")
             return
         url = entry["url"]
-        didl = build_didl(url, entry)
+        use_icy = should_use_icy_metadata(self.cfg, n)
+        didl = "" if use_icy else build_didl(url, entry)
         with self.lock:
             print(f"[play] {self.device_id} preset {n} -> {url} ({source})")
             try:
