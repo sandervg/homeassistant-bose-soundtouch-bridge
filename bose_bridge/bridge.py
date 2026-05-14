@@ -49,11 +49,18 @@ def _clean_url(v) -> str:
     if v is None:
         return ""
     s = str(v).strip()
-    if len(s) >= 2 and s[0] == "`" and s[-1] == "`":
-        s = s[1:-1].strip()
+    if "`" in s:
+        s = s.replace("`", "").strip()
     if len(s) >= 2 and s[0] in ("'", '"') and s[-1] == s[0]:
         s = s[1:-1].strip()
     return s
+
+
+def _ws_kind(msg: str) -> str:
+    m = re.search(r"<updates\b[^>]*>\s*<([A-Za-z0-9_:.-]+)", msg)
+    if m:
+        return m.group(1)
+    return "unknown"
 
 
 def _parse_xml(text: str) -> _ET.Element | None:
@@ -625,14 +632,15 @@ class SpeakerBridge:
         def on_message(_ws, msg):
             n = _parse_ws_preset_id(msg)
             if n is None:
-                if "nowSelectionUpdated" in msg or "<preset" in msg:
+                if "<updates" in msg and ("Updated" in msg or "<preset" in msg or "ContentItem" in msg):
                     now = time.time()
                     if now - self._ws_debug_last_log >= 15:
                         self._ws_debug_last_log = now
                         snippet = msg.strip().replace("\r", " ").replace("\n", " ")
                         if len(snippet) > 350:
                             snippet = snippet[:350] + "…"
-                        print(f"[ws] {self.device_id} unparsed preset message: {snippet}")
+                        kind = _ws_kind(msg)
+                        print(f"[ws] {self.device_id} unparsed ws message ({kind}): {snippet}")
                 return
             if n == 0:
                 return

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.9
+
+- Improve URL cleaning (strip backticks anywhere) and broaden WS debug logging to show message type when preset events are missing.
+
 ## 1.6.8
 
 - Improve WebSocket preset parsing: select the last non-zero preset id within `nowSelectionUpdated` and avoid treating id=0 as “unparsed”.
