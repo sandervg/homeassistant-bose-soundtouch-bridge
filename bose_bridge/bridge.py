@@ -82,36 +82,29 @@ def _coerce_bool01(v) -> str | None:
 
 
 def _parse_ws_preset_id(msg: str) -> int | None:
+    if "nowSelectionUpdated" in msg:
+        root = _parse_xml(msg)
+        if root is not None:
+            ids: list[int] = []
+            for node in (e for e in root.iter() if e.tag.split("}")[-1] == "nowSelectionUpdated"):
+                for preset_el in (e for e in node.iter() if e.tag.split("}")[-1] == "preset" and e.get("id")):
+                    try:
+                        ids.append(int(preset_el.get("id")))
+                    except Exception:
+                        continue
+            for v in reversed(ids):
+                if 1 <= v <= 6:
+                    return v
+            if ids:
+                return ids[-1]
+
     m = PRESET_RE.search(msg)
-    if m:
-        try:
-            return int(m.group(1))
-        except Exception:
-            return None
-
-    if "nowSelectionUpdated" not in msg:
+    if not m:
         return None
-
-    root = _parse_xml(msg)
-    if root is None:
+    try:
+        return int(m.group(1))
+    except Exception:
         return None
-
-    candidates = [e for e in root.iter() if e.tag.split("}")[-1] == "nowSelectionUpdated"]
-    if not candidates:
-        return None
-
-    for node in candidates:
-        preset_el = next(
-            (e for e in node.iter() if e.tag.split("}")[-1] == "preset" and e.get("id")),
-            None,
-        )
-        if preset_el is None:
-            continue
-        try:
-            return int(preset_el.get("id"))
-        except Exception:
-            return None
-    return None
 
 
 
@@ -631,7 +624,7 @@ class SpeakerBridge:
     def _ws_loop(self):
         def on_message(_ws, msg):
             n = _parse_ws_preset_id(msg)
-            if not n:
+            if n is None:
                 if "nowSelectionUpdated" in msg or "<preset" in msg:
                     now = time.time()
                     if now - self._ws_debug_last_log >= 15:

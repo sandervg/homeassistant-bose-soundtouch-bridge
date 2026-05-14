@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.8
+
+- Improve WebSocket preset parsing: select the last non-zero preset id within `nowSelectionUpdated` and avoid treating id=0 as “unparsed”.
+
 ## 1.6.7
 
 - Fix WebSocket preset detection: prefer the preset id inside `nowSelectionUpdated` (avoids incorrectly picking the wrong preset id when other `<preset>` tags appear in the message).
