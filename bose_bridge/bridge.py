@@ -63,6 +63,27 @@ def _ws_kind(msg: str) -> str:
     return "unknown"
 
 
+def _sanitize_cfg_urls(cfg: dict):
+    for n in range(1, 7):
+        k = f"preset_{n}_url"
+        if k in cfg:
+            cfg[k] = _clean_url(cfg.get(k))
+        k = f"preset_{n}_favicon"
+        if k in cfg:
+            cfg[k] = _clean_url(cfg.get(k))
+    speakers = cfg.get("speakers")
+    if isinstance(speakers, list):
+        for s in speakers:
+            if isinstance(s, dict):
+                for n in range(1, 7):
+                    k = f"preset_{n}_url"
+                    if k in s:
+                        s[k] = _clean_url(s.get(k))
+                    k = f"preset_{n}_favicon"
+                    if k in s:
+                        s[k] = _clean_url(s.get(k))
+
+
 def _parse_xml(text: str) -> _ET.Element | None:
     try:
         return _ET.fromstring(text.strip())
@@ -121,7 +142,10 @@ def load_options() -> dict:
     Docker, NAS, etc.) they come from environment variables."""
     if os.path.exists(OPTIONS_PATH):
         with open(OPTIONS_PATH) as f:
-            return json.load(f)
+            cfg = json.load(f)
+        if isinstance(cfg, dict):
+            _sanitize_cfg_urls(cfg)
+        return cfg
     print("[cfg] /data/options.json not found — reading config from environment")
     cfg: dict = {
         "bose_host": os.environ.get("BOSE_HOST", "").strip(),
@@ -271,7 +295,7 @@ def apply_preset_meta_overrides(cfg: dict, n: int, meta: dict) -> dict:
     name = (cfg.get(f"preset_{n}_name") or "").strip()
     if name:
         meta["name"] = name
-    favicon = (cfg.get(f"preset_{n}_favicon") or "").strip()
+    favicon = _clean_url(cfg.get(f"preset_{n}_favicon"))
     if favicon:
         meta["favicon"] = favicon
     return meta
@@ -326,8 +350,18 @@ def sync_presets(host: str, av, rc, presets: dict):
     """Save each configured preset onto the speaker so physical button presses
     fire the WebSocket event the bridge listens for. Skips slots already in
     the right state. Mutes during the operation to hide audio blips."""
-    targets = {n: e["url"] for n, e in presets.items() if e.get("url")}
-    needed = {n: u for n, u in targets.items() if _current_preset_url(host, n) != u}
+    targets = {n: _clean_url(e["url"]) for n, e in presets.items() if e.get("url")}
+    needed: dict[int, str] = {}
+    for n, u in targets.items():
+        current_raw = _current_preset_url(host, n)
+        if current_raw is None:
+            needed[n] = u
+            continue
+        if current_raw != u:
+            needed[n] = u
+            continue
+        if "`" in current_raw or current_raw.strip() != current_raw:
+            needed[n] = u
     if not needed:
         print("[sync] all configured presets already match the device — skipping")
         return
@@ -353,6 +387,7 @@ def sync_presets(host: str, av, rc, presets: dict):
         pass
     try:
         for n, url in needed.items():
+            url = _clean_url(url)
             try:
                 av.Stop(InstanceID=0)
             except Exception:
@@ -600,7 +635,7 @@ class SpeakerBridge:
         if not entry:
             print(f"[play] {self.device_id} preset {n} not configured ({source})")
             return
-        url = entry["url"]
+        url = _clean_url(entry["url"])
         didl = build_didl(url, entry)
         with self.lock:
             print(f"[play] {self.device_id} preset {n} -> {url} ({source})")

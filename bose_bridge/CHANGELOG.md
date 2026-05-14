@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.10
+
+- Sanitize URLs loaded from Home Assistant options (strip backticks/quotes), and force preset re-sync if a device has “dirty” stored URLs (backticks/leading/trailing spaces).
+
 ## 1.6.9
 
 - Improve URL cleaning (strip backticks anywhere) and broaden WS debug logging to show message type when preset events are missing.
