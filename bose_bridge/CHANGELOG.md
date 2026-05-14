@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.6
+
+- Harden URL parsing (strip backticks/quotes) and add WebSocket debug logging for unparsed preset events.
+
 ## 1.6.5
 
 - Revert `preset_N_use_icy` flag. Sending empty DIDL-Lite metadata to Bose SoundTouch via UPnP results in a blank screen and does not fallback to parsing stream ICY metadata.
