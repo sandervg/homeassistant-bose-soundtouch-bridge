@@ -45,6 +45,17 @@ SSDP_TARGET = "urn:schemas-upnp-org:device:MediaRenderer:1"
 
 # ---------- config ---------------------------------------------------------
 
+def _clean_url(v) -> str:
+    if v is None:
+        return ""
+    s = str(v).strip()
+    if len(s) >= 2 and s[0] == "`" and s[-1] == "`":
+        s = s[1:-1].strip()
+    if len(s) >= 2 and s[0] in ("'", '"') and s[-1] == s[0]:
+        s = s[1:-1].strip()
+    return s
+
+
 def _parse_xml(text: str) -> _ET.Element | None:
     try:
         return _ET.fromstring(text.strip())
@@ -107,10 +118,9 @@ def load_options() -> dict:
         "speakers": [],
     }
     for n in range(1, 7):
-        cfg[f"preset_{n}_url"] = os.environ.get(f"PRESET_{n}_URL", "").strip()
+        cfg[f"preset_{n}_url"] = _clean_url(os.environ.get(f"PRESET_{n}_URL", ""))
         cfg[f"preset_{n}_name"] = os.environ.get(f"PRESET_{n}_NAME", "").strip()
         cfg[f"preset_{n}_favicon"] = os.environ.get(f"PRESET_{n}_FAVICON", "").strip()
-        cfg[f"preset_{n}_use_icy"] = os.environ.get(f"PRESET_{n}_USE_ICY", "").strip().lower() in ("1", "true", "yes", "on")
     speakers_json = os.environ.get("SPEAKERS_JSON", "").strip()
     if speakers_json:
         try:
@@ -529,6 +539,7 @@ class SpeakerBridge:
         self.last_preset: str | None = None
         self.last_preset_time: str | None = None
         self.last_error: str | None = None
+        self._ws_debug_last_log: float = 0.0
 
         device_id, friendly, model = fetch_speaker_info(host)
         self.device_id = device_id
@@ -539,7 +550,7 @@ class SpeakerBridge:
 
         self.presets: dict[int, dict] = {}
         for n in range(1, 7):
-            url = (cfg.get(f"preset_{n}_url") or "").strip()
+            url = _clean_url(cfg.get(f"preset_{n}_url"))
             if not url:
                 continue
             meta = lookup_station(url)
@@ -609,6 +620,14 @@ class SpeakerBridge:
         def on_message(_ws, msg):
             n = _parse_ws_preset_id(msg)
             if not n:
+                if "nowSelectionUpdated" in msg or "<preset" in msg:
+                    now = time.time()
+                    if now - self._ws_debug_last_log >= 15:
+                        self._ws_debug_last_log = now
+                        snippet = msg.strip().replace("\r", " ").replace("\n", " ")
+                        if len(snippet) > 350:
+                            snippet = snippet[:350] + "…"
+                        print(f"[ws] {self.device_id} unparsed preset message: {snippet}")
                 return
             if n == 0:
                 return
