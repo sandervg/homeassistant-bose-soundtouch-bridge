@@ -82,24 +82,36 @@ def _coerce_bool01(v) -> str | None:
 
 
 def _parse_ws_preset_id(msg: str) -> int | None:
+    m = PRESET_RE.search(msg)
+    if m:
+        try:
+            return int(m.group(1))
+        except Exception:
+            return None
+
+    if "nowSelectionUpdated" not in msg:
+        return None
+
     root = _parse_xml(msg)
-    if root is not None:
+    if root is None:
+        return None
+
+    candidates = [e for e in root.iter() if e.tag.split("}")[-1] == "nowSelectionUpdated"]
+    if not candidates:
+        return None
+
+    for node in candidates:
         preset_el = next(
-            (e for e in root.iter() if e.tag.split("}")[-1] == "preset" and e.get("id")),
+            (e for e in node.iter() if e.tag.split("}")[-1] == "preset" and e.get("id")),
             None,
         )
-        if preset_el is not None:
-            try:
-                return int(preset_el.get("id"))
-            except Exception:
-                return None
-    m = PRESET_RE.search(msg)
-    if not m:
-        return None
-    try:
-        return int(m.group(1))
-    except Exception:
-        return None
+        if preset_el is None:
+            continue
+        try:
+            return int(preset_el.get("id"))
+        except Exception:
+            return None
+    return None
 
 
 

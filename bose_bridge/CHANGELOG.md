@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.7
+
+- Fix WebSocket preset detection: prefer the preset id inside `nowSelectionUpdated` (avoids incorrectly picking the wrong preset id when other `<preset>` tags appear in the message).
+
 ## 1.6.6
 
 - Harden URL parsing (strip backticks/quotes) and add WebSocket debug logging for unparsed preset events.
