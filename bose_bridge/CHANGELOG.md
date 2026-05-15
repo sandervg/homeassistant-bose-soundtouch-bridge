@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.11
+
+- Change preset sync to use the local `POST /storePreset` endpoint (deterministic, no `/key` long-press dependency).
+
 ## 1.6.10
 
 - Sanitize URLs loaded from Home Assistant options (strip backticks/quotes), and force preset re-sync if a device has “dirty” stored URLs (backticks/leading/trailing spaces).

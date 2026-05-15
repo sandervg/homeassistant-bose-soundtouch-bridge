@@ -318,6 +318,33 @@ def _key(host: str, state: str, key: str):
         pass  # release_after_hold returns an XML-parse error but still saves
 
 
+def _store_preset(host: str, n: int, url: str, name: str | None) -> bool:
+    url = _clean_url(url)
+    if not url:
+        return False
+    label = (name or "").strip() or f"Preset {n}"
+    body = (
+        '<?xml version="1.0" encoding="UTF-8" ?>'
+        f'<preset id="{n}">'
+        f'<ContentItem source="UPNP" location="{html.escape(url, quote=True)}" '
+        'sourceAccount="UPnPUserName" isPresetable="true">'
+        f"<itemName>{html.escape(label)}</itemName>"
+        "</ContentItem>"
+        "</preset>"
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        f"http://{host}:8090/storePreset",
+        data=body,
+        headers={"Content-Type": "application/xml"},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5).read()
+        return True
+    except Exception:
+        return False
+
+
 def _current_preset_url(host: str, n: int) -> str | None:
     try:
         with urllib.request.urlopen(f"http://{host}:8090/presets", timeout=5) as r:
@@ -349,81 +376,37 @@ def _current_preset_url(host: str, n: int) -> str | None:
 def sync_presets(host: str, av, rc, presets: dict):
     """Save each configured preset onto the speaker so physical button presses
     fire the WebSocket event the bridge listens for. Skips slots already in
-    the right state. Mutes during the operation to hide audio blips."""
-    targets = {n: _clean_url(e["url"]) for n, e in presets.items() if e.get("url")}
-    needed: dict[int, str] = {}
-    for n, u in targets.items():
+    the right state."""
+    targets = {n: {"url": _clean_url(e["url"]), "name": e.get("name")} for n, e in presets.items() if e.get("url")}
+    needed: dict[int, dict] = {}
+    for n, entry in targets.items():
+        u = entry["url"]
         current_raw = _current_preset_url(host, n)
         if current_raw is None:
-            needed[n] = u
+            needed[n] = entry
             continue
-        if current_raw != u:
-            needed[n] = u
+        current_clean = _clean_url(current_raw)
+        if current_clean != u:
+            needed[n] = entry
             continue
-        if "`" in current_raw or current_raw.strip() != current_raw:
-            needed[n] = u
+        if current_raw != current_clean:
+            needed[n] = entry
     if not needed:
         print("[sync] all configured presets already match the device — skipping")
         return
     print(f"[sync] {len(needed)}/{len(targets)} presets need writing: {sorted(needed)}")
 
-    saved_vol = None
-    saved_mute = None
-    try:
-        saved_vol = int(rc.GetVolume(InstanceID=0, Channel="Master")["CurrentVolume"])
-    except Exception:
-        pass
-    try:
-        saved_mute = _coerce_bool01(rc.GetMute(InstanceID=0, Channel="Master")["CurrentMute"])
-    except Exception:
-        pass
-
-    did_mute = False
-    try:
-        if saved_mute != "1":
-            rc.SetMute(InstanceID=0, Channel="Master", DesiredMute="1")
-            did_mute = True
-    except Exception:
-        pass
-    try:
-        for n, url in needed.items():
-            url = _clean_url(url)
-            try:
-                av.Stop(InstanceID=0)
-            except Exception:
-                pass
-            time.sleep(0.4)
-            # IMPORTANT: empty CurrentURIMetaData. With DIDL, the speaker
-            # marks the now-playing item as isPresetable="false" and silently
-            # ignores the long-press save. The bridge applies DIDL at runtime.
-            av.SetAVTransportURI(InstanceID=0, CurrentURI=url, CurrentURIMetaData="")
-            av.Play(InstanceID=0, Speed="1")
-            time.sleep(3.5)
-            _key(host, "press", f"PRESET_{n}")
-            time.sleep(0.8)
-            _key(host, "release_after_hold", f"PRESET_{n}")
-            time.sleep(2.0)
-            stored = _current_preset_url(host, n)
-            if stored == url:
-                print(f"[sync]  ✓ preset {n} -> {url}")
-            else:
-                print(f"[sync]  ✗ preset {n} did not stick (now: {stored})")
-        try:
-            av.Stop(InstanceID=0)
-        except Exception:
-            pass
-    finally:
-        if did_mute:
-            try:
-                rc.SetMute(InstanceID=0, Channel="Master", DesiredMute=(saved_mute or "0"))
-            except Exception:
-                pass
-        if saved_vol is not None:
-            try:
-                rc.SetVolume(InstanceID=0, Channel="Master", DesiredVolume=str(saved_vol))
-            except Exception:
-                pass
-        print(f"[sync] restored audio state (mute={saved_mute}, volume={saved_vol})")
+    for n, entry in needed.items():
+        url = entry["url"]
+        name = entry.get("name")
+        ok = _store_preset(host, n, url, name)
+        time.sleep(0.2)
+        stored = _current_preset_url(host, n)
+        stored_clean = _clean_url(stored) if stored is not None else None
+        if ok and stored_clean == url:
+            print(f"[sync]  ✓ preset {n} -> {url}")
+        else:
+            print(f"[sync]  ✗ preset {n} did not stick (now: {stored})")
 
 
 # ---------- MQTT -----------------------------------------------------------
