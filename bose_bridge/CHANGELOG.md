@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1
+
+- Fix add-on Docker build by correcting build context copy paths in Dockerfiles.
+
 ## 1.7.0
 
 - Bump add-on version to 1.7.0.

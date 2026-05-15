@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 py3-pip py3-lxml \
         paho-mqtt==2.1.0
 
 COPY bridge.py /
-COPY bose_bridge /bose_bridge
+COPY . /bose_bridge
 COPY run.sh /
 RUN chmod a+x /run.sh
 
