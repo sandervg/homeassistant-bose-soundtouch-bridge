@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.7.3
+
+- Add automatic retry with exponential backoff for critical network operations:
+  - SSDP speaker discovery
+  - `/info` endpoint for speaker details
+  - `/presets` endpoint for preset state
+  - `storePreset` endpoint for preset synchronization
+- Extend audio format support in DIDL-Lite metadata:
+  - AAC (m4a, m4b)
+  - Ogg Vorbis (ogg, oga)
+  - FLAC (flac)
+  - WAV (wav)
+  - WMA (wma)
+  - MP3 (mp3, mp2, mpga) — still default
+- Document HTTPS limitation: SoundTouch firmware requires plain HTTP URLs; HTTPS is not supported.
+
 ## 1.7.2
 
 - Fix runtime error when playing presets: import `build_didl` into the bridge module.

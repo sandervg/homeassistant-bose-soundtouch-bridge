@@ -1,5 +1,6 @@
 import re
 import socket
+import time
 import urllib.request
 import xml.etree.ElementTree as _ET
 
@@ -9,6 +10,23 @@ except ImportError:  # pragma: no cover
     upnpclient = None
 
 from bose_bridge.helpers import _find_first_text, _parse_xml
+
+
+def _retry(max_attempts: int = 3, backoff_sec: float = 1.0):
+    """Decorator for retrying operations with exponential backoff."""
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts - 1:
+                        raise
+                    wait = backoff_sec * (2 ** attempt)
+                    print(f"[retry] {fn.__name__} attempt {attempt + 1} failed: {e}; retrying in {wait}s")
+                    time.sleep(wait)
+        return wrapper
+    return decorator
 
 SSDP_ADDR = ("239.255.255.250", 1900)
 SSDP_TARGET = "urn:schemas-upnp-org:device:MediaRenderer:1"
@@ -62,8 +80,9 @@ def discover_soundtouch() -> str | None:
     return hosts[0] if hosts else None
 
 
+@_retry(max_attempts=3, backoff_sec=0.5)
 def fetch_speaker_info(host: str) -> tuple[str, str, str]:
-    """Return (device_id, friendly_name, model) by hitting /info."""
+    """Return (device_id, friendly_name, model) by hitting /info with retry."""
     with urllib.request.urlopen(f"http://{host}:8090/info", timeout=5) as r:
         info = r.read().decode()
 

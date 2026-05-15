@@ -1,6 +1,6 @@
 # Home Assistant: Bose SoundTouch Bridge
 
-Latest release: **1.7.2**
+Latest release: **1.7.3**
 
 A Home Assistant add-on repository that revives the **physical preset
 buttons** on Bose SoundTouch speakers after the **Bose cloud retirement

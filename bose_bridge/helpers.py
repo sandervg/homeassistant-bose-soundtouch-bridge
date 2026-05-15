@@ -106,9 +106,40 @@ def _parse_ws_preset_id(msg: str) -> int | None:
 
 
 def build_didl(url: str, meta: dict) -> str:
+    """Build DIDL-Lite metadata XML for UPnP playback.
+    
+    Supports:
+    - audio/mpeg (MP3)
+    - audio/aac (AAC, m4a)
+    - audio/ogg (Ogg Vorbis)
+    - audio/flac (FLAC)
+    - audio/wav (WAV)
+    - audio/x-ms-wma (WMA)
+    - application/ogg (Ogg container)
+    """
     title = html.escape(meta.get("name") or "Internet Radio")
     art = html.escape(meta.get("favicon") or "")
     art_tag = f"<upnp:albumArtURI>{art}</upnp:albumArtURI>" if art else ""
+    
+    # Infer protocol info from URL extension
+    url_lower = url.lower()
+    protocol_info = "http-get:*:audio/mpeg:*"
+    if url_lower.endswith(("m4a", ".m4b")):
+        protocol_info = "http-get:*:audio/aac:*"
+    elif url_lower.endswith(".ogg") or url_lower.endswith(".oga"):
+        protocol_info = "http-get:*:audio/ogg:*"
+    elif url_lower.endswith(".flac"):
+        protocol_info = "http-get:*:audio/flac:*"
+    elif url_lower.endswith(".wav"):
+        protocol_info = "http-get:*:audio/wav:*"
+    elif url_lower.endswith(".wma"):
+        protocol_info = "http-get:*:audio/x-ms-wma:*"
+    elif url_lower.endswith(("mp3", ".mp2", ".mpga")):
+        protocol_info = "http-get:*:audio/mpeg:*"
+    else:
+        # Default to mpeg for unknown extensions; SoundTouch usually tries to play anyway
+        protocol_info = "http-get:*:audio/mpeg:*"
+    
     return (
         '<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" '
         'xmlns:dc="http://purl.org/dc/elements/1.1/" '
@@ -117,7 +148,7 @@ def build_didl(url: str, meta: dict) -> str:
         f"<dc:title>{title}</dc:title>"
         "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>"
         f"{art_tag}"
-        f'<res protocolInfo="http-get:*:audio/mpeg:*">{html.escape(url)}</res>'
+        f'<res protocolInfo="{protocol_info}">{html.escape(url)}</res>'
         "</item></DIDL-Lite>"
     )
 

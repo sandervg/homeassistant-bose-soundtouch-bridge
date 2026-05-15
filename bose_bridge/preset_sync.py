@@ -6,6 +6,23 @@ import urllib.request
 from bose_bridge.helpers import _clean_url, _parse_xml
 
 
+def _retry(max_attempts: int = 3, backoff_sec: float = 0.5):
+    """Decorator for retrying operations with exponential backoff."""
+    def decorator(fn):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts - 1:
+                        raise
+                    wait = backoff_sec * (2 ** attempt)
+                    print(f"[retry] {fn.__name__} attempt {attempt + 1} failed: {e}; retrying in {wait}s")
+                    time.sleep(wait)
+        return wrapper
+    return decorator
+
+
 def _key(host: str, state: str, key: str):
     """POST a key event to the SoundTouch /key endpoint."""
     body = f'<key state="{state}" sender="Gabbo">{key}</key>'.encode()
@@ -43,10 +60,12 @@ def _store_preset(host: str, n: int, url: str, name: str | None) -> bool:
     try:
         urllib.request.urlopen(req, timeout=5).read()
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[sync] failed to store preset {n} on {host}: {e}")
         return False
 
 
+@_retry(max_attempts=3, backoff_sec=0.5)
 def _current_preset_url(host: str, n: int) -> str | None:
     try:
         with urllib.request.urlopen(f"http://{host}:8090/presets", timeout=5) as r:

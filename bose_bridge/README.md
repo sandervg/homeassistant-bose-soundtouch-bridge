@@ -1,7 +1,7 @@
 # Bose SoundTouch Bridge
 
-Release 1.7.2 fixes a runtime preset playback error and keeps the same physical
-preset support.
+Release 1.7.3 adds network resilience (automatic retry with exponential backoff)
+and support for multiple audio formats (AAC, Ogg, FLAC, WAV, WMA).
 
 Brings the **physical preset buttons** on Bose SoundTouch speakers back
 to life after the **Bose cloud retirement (2026)**.
@@ -112,14 +112,31 @@ extra proxy and are out of scope for this add-on.
 - The add-on stitches them together: catch the button event, push the
   URL via UPnP. No cloud needed.
 
-## Limitations
+## Audio Formats
 
-- Only **plain HTTP audio streams** (no token-protected commercial
-  streams without an extra proxy)
-- The speaker's display still shows whatever the original preset is set
-  to — buttons trigger the bridge regardless. If you want the right name
-  to show up, store any UPnP placeholder as the preset on the speaker.
-- Multi-speaker mode treats each speaker independently (no grouping / sync playback).
+Supported audio streams (via DIDL-Lite `protocolInfo`):
+- **MP3** (default, `audio/mpeg`): `.mp3`, `.mp2`, `.mpga`
+- **AAC** (`audio/aac`): `.m4a`, `.m4b`
+- **Ogg Vorbis** (`audio/ogg`): `.ogg`, `.oga`
+- **FLAC** (`audio/flac`): `.flac`
+- **WAV** (`audio/wav`): `.wav`
+- **WMA** (`audio/x-ms-wma`): `.wma`
+
+**Important**: SoundTouch firmware requires **plain HTTP** URLs. HTTPS is not supported;
+any HTTPS URL will fail. Use plain `http://` streams only.
+
+## Network Resilience
+
+Since firmware release 2026, SoundTouch speakers sometimes miss or delay SSDP
+responses and `/presets` updates. The bridge includes automatic retry with exponential
+backoff (0.5s → 1s → 2s) for critical operations:
+- SSDP speaker discovery
+- Speaker info retrieval (`/info`)
+- Preset state polling (`/presets`)
+- Preset writing (`/storePreset`)
+
+If a network operation fails after 3 retries, the error is logged and the bridge
+continues. This significantly improves reliability on congested or Wi-Fi networks.
 
 ## License
 
