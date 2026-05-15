@@ -1,5 +1,8 @@
 # Bose SoundTouch Bridge
 
+Release 1.7.0 adds internal refactors and improved reliability while
+keeping the same physical preset support.
+
 Brings the **physical preset buttons** on Bose SoundTouch speakers back
 to life after the **Bose cloud retirement (2026)**.
 

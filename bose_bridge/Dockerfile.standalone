@@ -13,6 +13,7 @@ RUN apk add --no-cache libxml2 libxslt \
  && apk del .build-deps
 
 COPY bridge.py /bridge.py
+COPY bose_bridge /bose_bridge
 
 ENV BOSE_HOST=""
 ENV SYNC_PRESETS_ON_STARTUP="true"

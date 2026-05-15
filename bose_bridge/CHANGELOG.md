@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0
+
+- Bump add-on version to 1.7.0.
+- Refactor bridge logic into modular Python packages and improve runtime test coverage.
+- Add unit tests for config loading, discovery, metadata lookup, MQTT discovery, and preset synchronization.
+
 ## 1.6.11
 
 - Change preset sync to use the local `POST /storePreset` endpoint (deterministic, no `/key` long-press dependency).
