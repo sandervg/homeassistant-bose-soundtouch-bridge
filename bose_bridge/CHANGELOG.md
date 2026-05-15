@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.2
+
+- Fix runtime error when playing presets: import `build_didl` into the bridge module.
+
 ## 1.7.1
 
 - Fix add-on Docker build by correcting build context copy paths in Dockerfiles.

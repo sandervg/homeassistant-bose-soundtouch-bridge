@@ -1,6 +1,6 @@
 # Bose SoundTouch Bridge
 
-Release 1.7.1 fixes the add-on Docker build and keeps the same physical
+Release 1.7.2 fixes a runtime preset playback error and keeps the same physical
 preset support.
 
 Brings the **physical preset buttons** on Bose SoundTouch speakers back

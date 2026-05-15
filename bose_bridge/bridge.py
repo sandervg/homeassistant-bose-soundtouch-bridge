@@ -27,7 +27,13 @@ from bose_bridge.discovery import (
     fetch_speaker_info,
     get_upnp_services,
 )
-from bose_bridge.helpers import _clean_url, _parse_ws_preset_id, _ws_kind, apply_preset_meta_overrides
+from bose_bridge.helpers import (
+    _clean_url,
+    _parse_ws_preset_id,
+    _ws_kind,
+    apply_preset_meta_overrides,
+    build_didl,
+)
 from bose_bridge.metadata import lookup_station
 from bose_bridge.preset_sync import sync_presets
 from bose_bridge.mqtt import fetch_mqtt_creds, MqttPublisher, publish_discovery
