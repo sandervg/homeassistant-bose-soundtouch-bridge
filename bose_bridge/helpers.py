@@ -122,19 +122,19 @@ def build_didl(url: str, meta: dict) -> str:
     art_tag = f"<upnp:albumArtURI>{art}</upnp:albumArtURI>" if art else ""
     
     # Infer protocol info from URL extension
-    url_lower = url.lower()
+    path = urllib.parse.urlparse(url).path.lower()
     protocol_info = "http-get:*:audio/mpeg:*"
-    if url_lower.endswith(("m4a", ".m4b")):
+    if path.endswith((".m4a", ".m4b", ".aac")):
         protocol_info = "http-get:*:audio/aac:*"
-    elif url_lower.endswith(".ogg") or url_lower.endswith(".oga"):
+    elif path.endswith((".ogg", ".oga")):
         protocol_info = "http-get:*:audio/ogg:*"
-    elif url_lower.endswith(".flac"):
+    elif path.endswith(".flac"):
         protocol_info = "http-get:*:audio/flac:*"
-    elif url_lower.endswith(".wav"):
+    elif path.endswith(".wav"):
         protocol_info = "http-get:*:audio/wav:*"
-    elif url_lower.endswith(".wma"):
+    elif path.endswith(".wma"):
         protocol_info = "http-get:*:audio/x-ms-wma:*"
-    elif url_lower.endswith(("mp3", ".mp2", ".mpga")):
+    elif path.endswith((".mp3", ".mp2", ".mpga")):
         protocol_info = "http-get:*:audio/mpeg:*"
     else:
         # Default to mpeg for unknown extensions; SoundTouch usually tries to play anyway

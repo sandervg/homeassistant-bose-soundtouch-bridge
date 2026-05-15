@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.4
+
+- Improve DIDL-Lite `protocolInfo` inference by using the URL path (handles query strings correctly) and fix extension matching for AAC/MP3.
+- Update radio-browser `User-Agent` header to a stable value (no hard-coded old version).
+- Simplify preset sync API: `sync_presets(host, presets)` no longer requires unused UPnP service arguments.
+
 ## 1.7.3
 
 - Add automatic retry with exponential backoff for critical network operations:

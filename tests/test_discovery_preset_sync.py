@@ -97,7 +97,7 @@ class TestDiscoveryPresetSync(unittest.TestCase):
         with patch.object(preset_sync, "_current_preset_url", return_value="http://stream.example/1"), patch.object(
             preset_sync, "_store_preset"
         ) as store_preset, patch("bose_bridge.preset_sync.time.sleep", return_value=None):
-            preset_sync.sync_presets("host", None, None, {1: {"url": "http://stream.example/1"}})
+            preset_sync.sync_presets("host", {1: {"url": "http://stream.example/1"}})
 
         store_preset.assert_not_called()
 
@@ -106,7 +106,7 @@ class TestDiscoveryPresetSync(unittest.TestCase):
         with patch.object(preset_sync, "_current_preset_url", side_effect=side_effects), patch.object(
             preset_sync, "_store_preset", return_value=True
         ) as store_preset, patch("bose_bridge.preset_sync.time.sleep", return_value=None):
-            preset_sync.sync_presets("host", None, None, {1: {"url": "http://stream.example/1"}})
+            preset_sync.sync_presets("host", {1: {"url": "http://stream.example/1"}})
 
         store_preset.assert_called_once_with("host", 1, "http://stream.example/1", None)
 

@@ -15,7 +15,7 @@ def lookup_station(url: str) -> dict[str, str]:
                 data=body,
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "homeassistant-bose-soundtouch-bridge/1.3.0",
+                    "User-Agent": "homeassistant-bose-soundtouch-bridge",
                 },
             )
             with urllib.request.urlopen(req, timeout=4) as r:

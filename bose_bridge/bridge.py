@@ -92,7 +92,7 @@ class SpeakerBridge:
             sync = sync_default
         if sync:
             try:
-                sync_presets(host, self.av, self.rc, self.presets)
+                sync_presets(host, self.presets)
             except Exception as e:
                 print(f"[sync] {self.device_id} failed: {e}")
 

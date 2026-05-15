@@ -2,6 +2,7 @@ import html
 import re
 import time
 import urllib.request
+from functools import wraps
 
 from bose_bridge.helpers import _clean_url, _parse_xml
 
@@ -9,6 +10,7 @@ from bose_bridge.helpers import _clean_url, _parse_xml
 def _retry(max_attempts: int = 3, backoff_sec: float = 0.5):
     """Decorator for retrying operations with exponential backoff."""
     def decorator(fn):
+        @wraps(fn)
         def wrapper(*args, **kwargs):
             for attempt in range(max_attempts):
                 try:
@@ -21,20 +23,6 @@ def _retry(max_attempts: int = 3, backoff_sec: float = 0.5):
                     time.sleep(wait)
         return wrapper
     return decorator
-
-
-def _key(host: str, state: str, key: str):
-    """POST a key event to the SoundTouch /key endpoint."""
-    body = f'<key state="{state}" sender="Gabbo">{key}</key>'.encode()
-    req = urllib.request.Request(
-        f"http://{host}:8090/key",
-        data=body,
-        headers={"Content-Type": "application/xml"},
-    )
-    try:
-        urllib.request.urlopen(req, timeout=5).read()
-    except Exception:
-        pass  # release_after_hold returns an XML-parse error but still saves
 
 
 def _store_preset(host: str, n: int, url: str, name: str | None) -> bool:
@@ -96,7 +84,7 @@ def _current_preset_url(host: str, n: int) -> str | None:
     return loc.group(1) if loc else None
 
 
-def sync_presets(host: str, av, rc, presets: dict):
+def sync_presets(host: str, presets: dict):
     """Save each configured preset onto the speaker so physical button presses
     fire the WebSocket event the bridge listens for. Skips slots already in
     the right state."""
