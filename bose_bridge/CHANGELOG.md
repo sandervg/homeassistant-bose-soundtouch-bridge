@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.5
+
+- Remove deprecated `build.yaml` and move base image selection into Dockerfile (uses `BUILD_ARCH`).
+
 ## 1.7.4
 
 - Improve DIDL-Lite `protocolInfo` inference by using the URL path (handles query strings correctly) and fix extension matching for AAC/MP3.
