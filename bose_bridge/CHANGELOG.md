@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.7
+
+- Cap MIME detection network overhead to 2 seconds total per URL (shared deadline across HEAD + Range fallback; cached).
+
+## 1.7.6
+
+- Improve DIDL-Lite MIME inference: use URL path extension first, then fall back to a lightweight HTTP HEAD/Range request (cached) when extension is missing.
+
 ## 1.7.5
 
 - Remove deprecated `build.yaml` and move base image selection into Dockerfile (uses `BUILD_ARCH`).
