@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1
+
+- **Generic Preset Triggers**: Improved button reporting logic. Presets are now always reported to Home Assistant as `last_preset`, even if no stream URL is configured. This allows using Bose physical buttons to trigger any HA automation (e.g., Music Assistant playlists).
+
 ## 1.8.0
 
 - **Modular Refactor**: Completely restructured the project into a proper Python package for better maintainability and testability.
