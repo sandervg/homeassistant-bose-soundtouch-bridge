@@ -9,6 +9,20 @@ def _env_bool(name: str, default: str = "true") -> bool:
     return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "on")
 
 
+def get_version() -> str:
+    """Read version from config.yaml in the same directory."""
+    try:
+        path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("version:"):
+                        return line.split(":", 1)[1].strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return "1.8.0"  # Fallback
+
+
 def load_options() -> dict[str, Any]:
     """Read config for Supervisor or standalone Docker."""
     cfg: dict[str, Any] = {

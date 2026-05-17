@@ -8,7 +8,7 @@ try:
 except ImportError:
     websocket = None
 
-from bose_bridge.config import load_options
+from bose_bridge.config import get_version, load_options
 from bose_bridge.constants import *
 from bose_bridge.discovery import (
     discover_soundtouch_all,
@@ -154,7 +154,7 @@ class SpeakerBridge:
 
 
 def main():
-    print(f"--- Bose SoundTouch Bridge (v1.8.0) ---")
+    print(f"--- Bose SoundTouch Bridge (v{get_version()}) ---")
     cfg = load_options()
     
     # Speaker Instances
