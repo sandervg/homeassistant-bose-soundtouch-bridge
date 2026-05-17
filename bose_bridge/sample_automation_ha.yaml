@@ -1,0 +1,136 @@
+# Example: Full Bose Preset Control with Music Assistant (No URLs in Bridge Config)
+
+# This automation demonstrates using all 6 physical preset buttons on your Bose speaker
+# to control Music Assistant media player without any stream URLs configured in the bridge.
+#
+# Prerequisites:
+# - Bose SoundTouch Bridge v1.8+ (with Generic Preset Triggers feature)
+# - Music Assistant integration set up in Home Assistant
+# - Your Bose speaker available as a media_player entity in HA
+
+alias: Bose Presets -> Music Assistant (Radios, Toggle, Next & Playlist)
+description: Handles presets 1-3 (Radios 1-3), 4 (Play/Pause), 5 (Next track), and 6 (Playlist + Shuffle)
+mode: single
+triggers:
+  - trigger: state
+    entity_id: sensor.bose_last_preset  # Adjust to match your speaker's sensor name
+    to: "1"
+    id: play_radio_1
+  - trigger: state
+    entity_id: sensor.bose_last_preset
+    to: "2"
+    id: play_radio_2
+  - trigger: state
+    entity_id: sensor.bose_last_preset
+    to: "3"
+    id: play_radio_3
+  - trigger: state
+    entity_id: sensor.bose_last_preset
+    to: "4"
+    id: play_pause_toggle
+  - trigger: state
+    entity_id: sensor.bose_last_preset
+    to: "5"
+    id: next_track
+  - trigger: state
+    entity_id: sensor.bose_last_preset
+    to: "6"
+    id: play_playlist
+conditions: []
+actions:
+  - choose:
+      # PRESET 1: RADIO 1
+      - conditions:
+          - condition: trigger
+            id: play_radio_1
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: media_player.bose_speaker  # Adjust to your speaker entity
+            data:
+              shuffle: false
+          - action: music_assistant.play_media
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              media_id: library://radio/1  # Adjust to your radio station
+              media_type: radio
+
+      # PRESET 2: RADIO 2
+      - conditions:
+          - condition: trigger
+            id: play_radio_2
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              shuffle: false
+          - action: music_assistant.play_media
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              media_id: library://radio/2  # Adjust to your radio station
+              media_type: radio
+
+      # PRESET 3: RADIO 3
+      - conditions:
+          - condition: trigger
+            id: play_radio_3
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              shuffle: false
+          - action: music_assistant.play_media
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              media_id: library://radio/3  # Adjust to your radio station
+              media_type: radio
+
+      # PRESET 4: PLAY / PAUSE (TOGGLE)
+      - conditions:
+          - condition: trigger
+            id: play_pause_toggle
+        sequence:
+          - action: media_player.media_play_pause
+            target:
+              entity_id: media_player.bose_speaker
+
+      # PRESET 5: NEXT TRACK
+      - conditions:
+          - condition: trigger
+            id: next_track
+        sequence:
+          - action: media_player.media_next_track
+            target:
+              entity_id: media_player.bose_speaker
+
+      # PRESET 6: PLAYLIST WITH SHUFFLE
+      - conditions:
+          - condition: trigger
+            id: play_playlist
+        sequence:
+          - action: media_player.shuffle_set
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              shuffle: true
+          - action: music_assistant.play_media
+            target:
+              entity_id: media_player.bose_speaker
+            data:
+              media_id: library://playlist/12  # Adjust to your playlist
+              media_type: playlist
+  # Default action if no condition matches (shouldn't happen with preset triggers)
+  - action: notify.mobile_app_my_phone  # Optional: notification for debugging
+    data:
+      message: "Unknown preset pressed: {{ trigger.to_state.state }}"
+
+# Notes:
+# - Make sure your Bose speaker entity_id matches the one used in this automation
+# - Adjust radio and playlist IDs to match your Music Assistant library
+# - This automation works with Bose SoundTouch Bridge v1.8+ where all preset buttons
+#   are reported to HA even if no stream URL is configured in the bridge

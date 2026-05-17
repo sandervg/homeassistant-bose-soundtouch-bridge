@@ -30,7 +30,7 @@ The bridge can be configured in two ways:
 
 ## Usage & Integrations
 
-### Using Presets as Generic Triggers (e.g., Music Assistant)
+### Using Presets as Generic Triggers (Simple Example)
 Since version 1.8.1, the bridge always reports button presses to Home Assistant, even if no `preset_N_url` is configured. This allows you to use physical buttons on your Bose speaker to trigger any automation.
 
 **Example: Play Music Assistant Playlist on Preset 1**
@@ -51,6 +51,17 @@ action:
       media_id: "library://playlist/12"
       media_type: playlist
 ```
+
+### Advanced Usage: Full Bose Preset Control with Music Assistant
+For more complex setups where you want to use all 6 preset buttons for different actions, see our complete example automation:
+
+See [`sample_automation_ha.yaml`](sample_automation_ha.yaml) for a full example that demonstrates how to:
+- Use presets 1-3 for different radio stations
+- Use preset 4 for Play/Pause toggle
+- Use preset 5 for Next Track
+- Use preset 6 for playing a playlist with shuffle
+
+This example requires Bose SoundTouch Bridge v1.8+ and shows how to completely control Music Assistant using physical preset buttons without configuring any stream URLs in the bridge.
 
 ## Developer Info
 
