@@ -44,7 +44,7 @@ trigger:
     entity_id: sensor.bose_soundtouch_last_preset # Adjust to your sensor entity
     to: "1"
 action:
-  - service: mass.play_media
+  - service: music_assistant.play_media # Use music_assistant.play_media for stable MA versions
     target:
       entity_id: media_player.bose_soundtouch_ma # Your speaker in Music Assistant
     data:
