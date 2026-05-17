@@ -8,14 +8,15 @@ Home Assistant add-on that revives physical preset buttons on Bose SoundTouch sp
 
 - `bose_bridge/` — Python package (not installable via pip; no `setup.py`/`pyproject.toml`)
 - `bridge.py` — entrypoint (`python3 -u /bridge.py` inside container, `python3 -u bridge.py` locally)
-- `bose_bridge/config.py` — reads `/data/options.json` (Supervisor) or env vars (standalone)
-- `bose_bridge/helpers.py` — URL cleaning, DIDL-Lite XML, MIME inference
+- `bose_bridge/config.py` — reads `/data/options.json` (Supervisor) or env vars (standalone). Includes `get_version()` which reads from `config.yaml`.
+- `bose_bridge/helpers.py` — URL cleaning, DIDL-Lite XML, MIME inference, WebSocket XML parsing
 - `bose_bridge/discovery.py` — SSDP speaker discovery, `/info` parsing, UPnP service lookup
 - `bose_bridge/preset_sync.py` — writes preset URLs to speaker's `/storePreset` endpoint
 - `bose_bridge/mqtt.py` — MQTT publisher + HA discovery configs
 - `bose_bridge/metadata.py` — station name/favicon lookup via radio-browser.info
-- `config.yaml` — HA add-on configuration schema (v1.7.7)
-- `run.sh` — Supervisor container entrypoint
+- `bose_bridge/constants.py` — centralized constants and custom exceptions (`BoseError`, `BoseConnectionError`, `NoURLAvailable`)
+- `bose_bridge/config.yaml` — HA add-on configuration schema (v1.8.2)
+- `run.sh` — Supervisor container entrypoint (executes `/bridge.py`)
 - `Dockerfile` — Supervisor deployment (uses `ghcr.io/home-assistant/${BUILD_ARCH}-base:latest`)
 - `Dockerfile.standalone` — standalone Docker (published to GHCR)
 - `tests/` — unit tests (stdlib `unittest`)
@@ -77,13 +78,15 @@ python bose_bridge/bridge.py
 
 - **SoundTouch firmware requires plain HTTP URLs** — HTTPS will fail silently. All stream URLs must use `http://`.
 - **Host networking is required** in Docker (`network_mode: host`) for SSDP multicast and UPnP.
-- Presets button events are only emitted when the speaker has a URL stored in that preset slot (hence the sync on startup).
+- **Generic Preset Triggers**: Button events are always reported to HA via MQTT (`last_preset`), even if no URL is configured for that preset. This allows external handling via Music Assistant or other HA automations.
+- **Preset State Reset**: `last_preset` state is reset to an empty string 1s after each update to ensure consecutive presses of the same button trigger HA automations correctly.
 - The speaker's UPnP description URL follows the pattern `http://<host>:8091/XD/BO5EBO5E-F00D-F00D-FEED-{deviceID}.xml`.
 - All critical network operations have built-in retry with exponential backoff (0.5s→1s→2s, 3 attempts max).
 
 ## Coding conventions
 
-- No formatter or linter config; match the existing style (no type annotations except bare `|` union syntax, no f-strings-only rule, logging via `print(f"[tag] ...")`)
-- Tests use `unittest.TestCase`, mocks via `unittest.mock.patch`
-- Version is in `bose_bridge/config.yaml` under `version:`
-- URLs coming from HA config are _dirty_ — always pass through `_clean_url()` (strips backticks, surrounding quotes, whitespace)
+- **Single Source of Truth**: Version is maintained in `bose_bridge/config.yaml` and read dynamically via `config.get_version()`.
+- **Type Annotations**: Use Python 3.10+ type hints (e.g., `dict[str, Any]`, `str | None`).
+- **Error Handling**: Use custom exceptions from `constants.py` (`BoseError`, etc.) instead of generic `ValueError`.
+- **Logging**: Use `print(f"[tag] ...")` for consistency.
+- Tests use `unittest.TestCase`, mocks via `unittest.mock.patch`.
