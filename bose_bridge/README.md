@@ -28,6 +28,30 @@ The bridge can be configured in two ways:
 1. **Home Assistant Add-on**: Via the `Configuration` tab in the HA UI.
 2. **Standalone Docker**: Using environment variables like `BOSE_HOST`, `PRESET_1_URL`, etc.
 
+## Usage & Integrations
+
+### Using Presets as Generic Triggers (e.g., Music Assistant)
+Since version 1.8.1, the bridge always reports button presses to Home Assistant, even if no `preset_N_url` is configured. This allows you to use physical buttons on your Bose speaker to trigger any automation.
+
+**Example: Play Music Assistant Playlist on Preset 1**
+1. Leave `preset_1_url` empty in the Add-on configuration.
+2. Create an automation in Home Assistant:
+
+```yaml
+alias: "Bose Button 1 -> Music Assistant"
+trigger:
+  - platform: state
+    entity_id: sensor.bose_soundtouch_last_preset # Adjust to your sensor entity
+    to: "1"
+action:
+  - service: mass.play_media
+    target:
+      entity_id: media_player.bose_soundtouch_ma # Your speaker in Music Assistant
+    data:
+      media_id: "library://playlist/12"
+      media_type: playlist
+```
+
 ## Developer Info
 
 ### Running Tests
