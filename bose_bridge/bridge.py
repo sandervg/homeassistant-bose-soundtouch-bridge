@@ -60,15 +60,20 @@ class SpeakerBridge:
 
     def _play_preset(self, n: int):
         try:
+            # 1. Always report to HA first (allows using presets as generic triggers)
+            print(f"[{self.host}] reporting preset {n} to Home Assistant")
+            self._update_ha_status("last_preset", str(n))
+            self._update_ha_status("last_preset_time", datetime.now().isoformat())
+
+            # 2. Check if we have a URL to play ourselves
             if n not in self.presets:
-                raise NoURLAvailable(f"preset {n} not configured")
+                print(f"[{self.host}] no local URL for preset {n} — HA automation should handle this")
+                return
 
             entry = self.presets[n]
             url = entry["url"]
             
-            print(f"[{self.host}] playing preset {n}: {url}")
-            self._update_ha_status("last_preset", str(n))
-            self._update_ha_status("last_preset_time", datetime.now().isoformat())
+            print(f"[{self.host}] playing local preset {n}: {url}")
 
             # Fetch metadata
             meta = lookup_station(url)
