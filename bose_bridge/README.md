@@ -1,107 +1,79 @@
-# Bose SoundTouch Bridge
+# Bose SoundTouch Bridge — Modular Package
 
-Brings the **physical preset buttons** on Bose SoundTouch speakers back
-to life after the **Bose cloud retirement (2026)**.
+This directory contains the core logic for the Bose SoundTouch Bridge. Starting with version 1.8.0, the project has been refactored into a modular structure.
 
-## What this fixes
+## Project Structure
 
-When the Bose cloud was retired, every preset that relied on it stopped
-working — TuneIn presets, the SoundTouch app, and the
-`LOCAL_INTERNET_RADIO` source all return errors. Spotify and AUX still
-work, but the six physical buttons on top of the speaker are mostly dead.
+- `bridge.py` — Main entry point. Manages `SpeakerBridge` threads and central MQTT communication.
+- `config.py` — Handles configuration loading from Home Assistant Supervisor (`options.json`) or environment variables.
+- `constants.py` — Centralized constants (timeouts, SSDP addresses, XML namespaces, etc.).
+- `discovery.py` — SSDP-based speaker discovery and `/info` metadata retrieval.
+- `helpers.py` — URL sanitization, XML parsing, and UPnP DIDL-Lite metadata generation.
+- `metadata.py` — Station name and favicon lookup via [radio-browser.info](https://radio-browser.info).
+- `mqtt.py` — MQTT connectivity and Home Assistant discovery configuration.
+- `preset_sync.py` — Logic for writing stream URLs directly to speaker preset slots.
+- `error_handler.py` — Global exception handling and logging.
 
-This add-on revives them. It listens to the speaker's local WebSocket
-notification stream and, whenever you press a preset button, pushes the
-URL you configured for that slot via UPnP — using the local
-`SetAVTransportURI` / `Play` calls that are still fully functional in
-the firmware.
+## Core Components
 
-## What you get
+### SpeakerBridge
+Each speaker is managed by an instance of `SpeakerBridge`. This class:
+1. Connects to the speaker's local WebSocket (`ws://<host>:8080`).
+2. Listens for `nowSelectionUpdated` events (physical button presses).
+3. Triggers playback via UPnP (`AVTransport:SetAVTransportURI`).
+4. Updates Home Assistant sensors via MQTT.
 
-- Press preset 1 → plays whatever stream URL you put in slot 1
-- Press preset 2 → slot 2
-- … and so on, all six buttons
-- Configurable per-preset URLs in the add-on's **Configuration** tab
-- Works with any plain HTTP/MP3 internet-radio stream (icecast, etc.)
-- No Bose cloud, no app, no rooting — pure local network
+### Configuration
+The bridge can be configured in two ways:
+1. **Home Assistant Add-on**: Via the `Configuration` tab in the HA UI.
+2. **Standalone Docker**: Using environment variables like `BOSE_HOST`, `PRESET_1_URL`, etc.
 
-## Requirements
+## Usage & Integrations
 
-- A Bose SoundTouch speaker (any model with the SoundTouch firmware) on
-  the same network as Home Assistant
-- Home Assistant OS or Supervised (the add-on runs as a Docker container
-  managed by the Supervisor)
+### Using Presets as Generic Triggers (Simple Example)
+Since version 1.8.1, the bridge always reports button presses to Home Assistant, even if no `preset_N_url` is configured. This allows you to use physical buttons on your Bose speaker to trigger any automation.
 
-## Setup
+**Example: Play Music Assistant Playlist on Preset 1**
+1. Leave `preset_1_url` empty in the Add-on configuration.
+2. Create an automation in Home Assistant:
 
-1. Install this add-on (see *Install* below).
-2. Open the add-on → **Configuration**.
-3. Either leave `bose_host` blank to auto-discover the speaker via SSDP,
-   or set it to the speaker's IP address (e.g. `192.168.1.42`).
-4. Fill in `preset_1_url` … `preset_6_url` with the stream URLs you want
-   each preset button to play. Leave any unused slots blank.
-5. Leave `sync_presets_on_startup` enabled (default). On startup, the
-   add-on writes each configured URL into the speaker's matching preset
-   slot — required so physical button presses emit the WebSocket event
-   the bridge listens for. Skip-when-equal makes restarts cheap.
-6. **Save** → **Start** → check the **Log** tab; it should print
-   ```
-   [cfg] preset map: ...
-   [upnp] description: http://...
-   [sync] all configured presets already match the device — skipping
-   [ws] connected to ws://...:8080
-   ```
+```yaml
+alias: "Bose Button 1 -> Music Assistant"
+trigger:
+  - platform: state
+    entity_id: sensor.bose_soundtouch_last_preset # Adjust to your sensor entity
+    to: "1"
+action:
+  - service: music_assistant.play_media # Use music_assistant.play_media for stable MA versions
+    target:
+      entity_id: media_player.bose_soundtouch_ma # Your speaker in Music Assistant
+    data:
+      media_id: "library://playlist/12"
+      media_type: playlist
+```
 
-Press a preset button on the speaker and the radio should kick in.
+### Advanced Usage: Full Bose Preset Control with Music Assistant
+For more complex setups where you want to use all 6 preset buttons for different actions, see our complete example automation:
 
-For HA control: with the Mosquitto Broker add-on running and the MQTT
-integration configured in HA Core, six `button.bose_<id>_preset_N`
-entities auto-appear via MQTT discovery. Pressing one in HA UI /
-automations / scripts plays the same URL the physical button would.
+See [`sample_automation_ha.yaml`](sample_automation_ha.yaml) for a full example that demonstrates how to:
+- Use presets 1-3 for different radio stations
+- Use preset 4 for Play/Pause toggle
+- Use preset 5 for Next Track
+- Use preset 6 for playing a playlist with shuffle
 
-## Example URLs (Belgian / Flemish radio)
+This example requires Bose SoundTouch Bridge v1.8+ and shows how to completely control Music Assistant using physical preset buttons without configuring any stream URLs in the bridge.
 
-| Preset | Station | URL |
-|---|---|---|
-| 1 | VRT Radio 1 | `http://icecast.vrtcdn.be/radio1-high.mp3` |
-| 2 | VRT Radio 2 OVL | `http://icecast.vrtcdn.be/ra2ovl-high.mp3` |
-| 3 | VRT Radio 1 Classics | `http://icecast.vrtcdn.be/radio1_classics-high.mp3` |
-| 4 | VRT Studio Brussel | `http://icecast.vrtcdn.be/stubru-high.mp3` |
-| 6 | VRT Nieuwsbrief | `http://progressive-audio.vrtcdn.be/content/fixed/11_11niws-snip_hi.mp3` |
+## Developer Info
 
-For other stations, look up the direct stream URL on the broadcaster's
-website (search for `icecast`, `mp3`, or `aac`). Some commercial stations
-hide their URL behind authenticated tokens — those won't work without an
-extra proxy and are out of scope for this add-on.
+### Running Tests
+Unit tests use the standard `unittest` library. Run them from the project root:
+```bash
+python -m unittest discover -s tests
+```
 
-## Install
-
-1. In Home Assistant: **Settings → Add-ons → App Store → ⋮ → Repositories**
-2. Add this repository's GitHub URL
-3. The "Bose SoundTouch Bridge" add-on appears in the store — click
-   **Install** → **Start**
-
-## How it works
-
-- Bose's stock firmware exposes a WebSocket notification stream on
-  `ws://<speaker>:8080` (subprotocol `gabbo`). It emits an event for
-  every preset button press:
-  `<nowSelectionUpdated><preset id="N">…`
-- The same firmware exposes a UPnP `MediaRenderer` on port 8091 with a
-  fully working `AVTransport` service (the very same one the SoundTouch
-  app uses for "play this URL").
-- The add-on stitches them together: catch the button event, push the
-  URL via UPnP. No cloud needed.
-
-## Limitations
-
-- Only **plain HTTP audio streams** (no token-protected commercial
-  streams without an extra proxy)
-- The speaker's display still shows whatever the original preset is set
-  to — buttons trigger the bridge regardless. If you want the right name
-  to show up, store any UPnP placeholder as the preset on the speaker.
-- One bridge per speaker. Multi-speaker support is on the roadmap.
-
-## License
-
-MIT
+### Local Development
+To run the bridge locally (requires environment variables):
+```bash
+export BOSE_HOST="192.168.1.x"
+python bridge.py
+```
