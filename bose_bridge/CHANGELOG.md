@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.2
+
+- **Improved Button Reliability**: Added a state reset (1s delay) for `last_preset` sensor. This ensures that pressing the same physical button multiple times in a row will always trigger Home Assistant automations.
+
 ## 1.8.1
 
 - **Generic Preset Triggers**: Improved button reporting logic. Presets are now always reported to Home Assistant as `last_preset`, even if no stream URL is configured. This allows using Bose physical buttons to trigger any HA automation (e.g., Music Assistant playlists).

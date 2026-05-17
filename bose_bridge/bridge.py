@@ -57,6 +57,14 @@ class SpeakerBridge:
             return
         topic = f"bose_bridge/{self.device_id}/{key}"
         self.mqtt_pub.publish(topic, value)
+        
+        # If it's a preset button, publish an empty value shortly after 
+        # to ensure the next press of the same button triggers HA again.
+        if key == "last_preset" and value != "":
+            def reset_preset():
+                time.sleep(1)
+                self.mqtt_pub.publish(topic, "")
+            threading.Thread(target=reset_preset, daemon=True).start()
 
     def _play_preset(self, n: int):
         try:
