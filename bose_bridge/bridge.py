@@ -154,7 +154,7 @@ class SpeakerBridge:
 
 
 def main():
-    print(f"--- Bose SoundTouch Bridge (v1.7.7) ---")
+    print(f"--- Bose SoundTouch Bridge (v1.8.0) ---")
     cfg = load_options()
     
     # Speaker Instances
