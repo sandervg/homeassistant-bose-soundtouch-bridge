@@ -10,7 +10,7 @@ try:
 except ImportError:  # pragma: no cover
     mqtt = None
 
-from bose_bridge.config import SUPERVISOR_TOKEN, SUPERVISOR_URL
+from bose_bridge.constants import SUPERVISOR_TOKEN, SUPERVISOR_URL
 
 
 def fetch_mqtt_creds() -> dict | None:

@@ -68,7 +68,8 @@ class TestDiscoveryPresetSync(unittest.TestCase):
     def test_fetch_speaker_info_raises_if_device_id_missing(self):
         xml = '<info><name>Unknown</name><type>SoundTouch</type></info>'
         with patch("bose_bridge.discovery.urllib.request.urlopen", return_value=DummyResponse(xml.encode())):
-            with self.assertRaises(ValueError):
+            from bose_bridge.constants import BoseError
+            with self.assertRaises(BoseError):
                 discovery.fetch_speaker_info("host")
 
     def test_current_preset_url_parses_xml_location(self):

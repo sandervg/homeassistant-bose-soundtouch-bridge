@@ -9,6 +9,7 @@ try:
 except ImportError:  # pragma: no cover
     upnpclient = None
 
+from bose_bridge.constants import *
 from bose_bridge.helpers import _find_first_text, _parse_xml
 
 
@@ -27,10 +28,6 @@ def _retry(max_attempts: int = 3, backoff_sec: float = 1.0):
                     time.sleep(wait)
         return wrapper
     return decorator
-
-SSDP_ADDR = ("239.255.255.250", 1900)
-SSDP_TARGET = "urn:schemas-upnp-org:device:MediaRenderer:1"
-
 
 def discover_soundtouch_all() -> list[str]:
     msg = (
@@ -83,8 +80,11 @@ def discover_soundtouch() -> str | None:
 @_retry(max_attempts=3, backoff_sec=0.5)
 def fetch_speaker_info(host: str) -> tuple[str, str, str]:
     """Return (device_id, friendly_name, model) by hitting /info with retry."""
-    with urllib.request.urlopen(f"http://{host}:8090/info", timeout=5) as r:
-        info = r.read().decode()
+    try:
+        with urllib.request.urlopen(f"http://{host}:8090/info", timeout=5) as r:
+            info = r.read().decode()
+    except Exception as e:
+        raise BoseConnectionError(f"failed to connect to {host}: {e}")
 
     device_id = None
     friendly = "SoundTouch"
@@ -101,7 +101,7 @@ def fetch_speaker_info(host: str) -> tuple[str, str, str]:
         device_id = m.group(1) if m else None
 
     if not device_id:
-        raise ValueError("unable to parse deviceID from /info response")
+        raise BoseError("unable to parse deviceID from /info response")
 
     return device_id, friendly, model
 

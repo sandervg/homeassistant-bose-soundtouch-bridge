@@ -1,8 +1,8 @@
-import json
+import json 
 import urllib.parse
 import urllib.request
 
-from bose_bridge.helpers import RADIO_BROWSER_BASES
+from bose_bridge.constants import RADIO_BROWSER_BASES
 
 
 def lookup_station(url: str) -> dict[str, str]:

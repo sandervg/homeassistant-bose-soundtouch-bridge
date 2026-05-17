@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.0
+
+- **Modular Refactor**: Completely restructured the project into a proper Python package for better maintainability and testability.
+- **Improved Multi-speaker Support**: Each speaker now runs in its own thread with dedicated WebSocket and UPnP handling, coordinated by a central bridge.
+- **Centralized Configuration**: All constants and default values moved to `constants.py`.
+- **Unified Config Loading**: Simplified `config.py` to handle both Home Assistant Supervisor and standalone Docker environments seamlessly.
+- **Robust MQTT Command Handling**: New centralized MQTT message dispatcher for reliable cross-speaker preset triggering.
+- **Enhanced URL Sanitization**: Improved cleaning of stream URLs (stripping backticks, quotes, and whitespace) across all config entry points.
+- **Code Quality**: Applied PEP8 formatting, improved error handling, and updated unit tests to cover the new modular structure.
+
 ## 1.7.7
 
 - Cap MIME detection network overhead to 2 seconds total per URL (shared deadline across HEAD + Range fallback; cached).
