@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+bose_bridge/scripts/
+bose_bridge/select_test.py
+bose_bridge/set_presets.py
