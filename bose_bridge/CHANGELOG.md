@@ -1,5 +1,126 @@
 # Changelog
 
+## 1.8.2
+
+- **Improved Button Reliability**: Added a state reset (1s delay) for `last_preset` sensor. This ensures that pressing the same physical button multiple times in a row will always trigger Home Assistant automations.
+
+## 1.8.1
+
+- **Generic Preset Triggers**: Improved button reporting logic. Presets are now always reported to Home Assistant as `last_preset`, even if no stream URL is configured. This allows using Bose physical buttons to trigger any HA automation (e.g., Music Assistant playlists).
+
+## 1.8.0
+
+- **Modular Refactor**: Completely restructured the project into a proper Python package for better maintainability and testability.
+- **Improved Multi-speaker Support**: Each speaker now runs in its own thread with dedicated WebSocket and UPnP handling, coordinated by a central bridge.
+- **Centralized Configuration**: All constants and default values moved to `constants.py`.
+- **Unified Config Loading**: Simplified `config.py` to handle both Home Assistant Supervisor and standalone Docker environments seamlessly.
+- **Robust MQTT Command Handling**: New centralized MQTT message dispatcher for reliable cross-speaker preset triggering.
+- **Enhanced URL Sanitization**: Improved cleaning of stream URLs (stripping backticks, quotes, and whitespace) across all config entry points.
+- **Code Quality**: Applied PEP8 formatting, improved error handling, and updated unit tests to cover the new modular structure.
+
+## 1.7.7
+
+- Cap MIME detection network overhead to 2 seconds total per URL (shared deadline across HEAD + Range fallback; cached).
+
+## 1.7.6
+
+- Improve DIDL-Lite MIME inference: use URL path extension first, then fall back to a lightweight HTTP HEAD/Range request (cached) when extension is missing.
+
+## 1.7.5
+
+- Remove deprecated `build.yaml` and move base image selection into Dockerfile (uses `BUILD_ARCH`).
+
+## 1.7.4
+
+- Improve DIDL-Lite `protocolInfo` inference by using the URL path (handles query strings correctly) and fix extension matching for AAC/MP3.
+- Update radio-browser `User-Agent` header to a stable value (no hard-coded old version).
+- Simplify preset sync API: `sync_presets(host, presets)` no longer requires unused UPnP service arguments.
+
+## 1.7.3
+
+- Add automatic retry with exponential backoff for critical network operations:
+  - SSDP speaker discovery
+  - `/info` endpoint for speaker details
+  - `/presets` endpoint for preset state
+  - `storePreset` endpoint for preset synchronization
+- Extend audio format support in DIDL-Lite metadata:
+  - AAC (m4a, m4b)
+  - Ogg Vorbis (ogg, oga)
+  - FLAC (flac)
+  - WAV (wav)
+  - WMA (wma)
+  - MP3 (mp3, mp2, mpga) — still default
+- Document HTTPS limitation: SoundTouch firmware requires plain HTTP URLs; HTTPS is not supported.
+
+## 1.7.2
+
+- Fix runtime error when playing presets: import `build_didl` into the bridge module.
+
+## 1.7.1
+
+- Fix add-on Docker build by correcting build context copy paths in Dockerfiles.
+
+## 1.7.0
+
+- Bump add-on version to 1.7.0.
+- Refactor bridge logic into modular Python packages and improve runtime test coverage.
+- Add unit tests for config loading, discovery, metadata lookup, MQTT discovery, and preset synchronization.
+
+## 1.6.11
+
+- Change preset sync to use the local `POST /storePreset` endpoint (deterministic, no `/key` long-press dependency).
+
+## 1.6.10
+
+- Sanitize URLs loaded from Home Assistant options (strip backticks/quotes), and force preset re-sync if a device has “dirty” stored URLs (backticks/leading/trailing spaces).
+
+## 1.6.9
+
+- Improve URL cleaning (strip backticks anywhere) and broaden WS debug logging to show message type when preset events are missing.
+
+## 1.6.8
+
+- Improve WebSocket preset parsing: select the last non-zero preset id within `nowSelectionUpdated` and avoid treating id=0 as “unparsed”.
+
+## 1.6.7
+
+- Fix WebSocket preset detection: prefer the preset id inside `nowSelectionUpdated` (avoids incorrectly picking the wrong preset id when other `<preset>` tags appear in the message).
+
+## 1.6.6
+
+- Harden URL parsing (strip backticks/quotes) and add WebSocket debug logging for unparsed preset events.
+
+## 1.6.5
+
+- Revert `preset_N_use_icy` flag. Sending empty DIDL-Lite metadata to Bose SoundTouch via UPnP results in a blank screen and does not fallback to parsing stream ICY metadata.
+
+## 1.6.4
+
+- Add optional per-preset `preset_N_use_icy` flag to prefer ICY “StreamTitle” metadata on the speaker (sends empty UPnP metadata instead of DIDL).
+
+## 1.6.3
+
+- Add Home Assistant MQTT-discovery sensors per speaker: WebSocket connectivity, last played preset + timestamp, and last error.
+
+## 1.6.2
+
+- Allow configuring manual preset metadata (`preset_N_name`, `preset_N_favicon`) to override radio-browser results.
+
+## 1.6.1
+
+- Fix add-on options validation when using only `speakers` (root preset fields are now truly optional).
+
+## 1.6.0
+
+- Multi-speaker support via a `speakers` list in add-on configuration (one WebSocket thread per speaker).
+- MQTT command handling now supports multiple devices.
+
+## 1.5.1
+
+- More robust XML parsing for speaker info and preset state (with regex fallback).
+- Sync now restores previous mute/volume state after writing presets.
+- Pinned Python dependency versions in Docker images for reproducible builds.
+
 ## 1.5.0
 
 - **Standalone Docker image** for Home Assistant Container / plain
