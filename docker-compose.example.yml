@@ -11,7 +11,7 @@
 
 services:
   bose_bridge:
-    image: ghcr.io/kom101/homeassistant-bose-soundtouch-bridge:latest
+    image: ghcr.io/sandervg/bose-soundtouch-bridge:latest
     container_name: bose-soundtouch-bridge
     network_mode: host
     restart: unless-stopped

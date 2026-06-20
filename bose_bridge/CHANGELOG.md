@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.8.3
+
+- **Fix add-on build failure** reported by a user on the latest Home
+  Assistant base image. `py3-lxml` from apk doesn't always satisfy
+  `upnpclient`'s lxml version pin, so pip falls back to compiling lxml
+  from source — which needs a C toolchain that wasn't in the image. The
+  add-on Dockerfile now installs `gcc`, `musl-dev`, `libxml2-dev`,
+  `libxslt-dev`, `python3-dev` as a throwaway `.build-deps` virtual
+  package and removes them after install, keeping the runtime image
+  small. (`libxml2` / `libxslt` stay — lxml links against them at run
+  time.) The standalone image already had this hardening.
+- **Add-on branding**: ship `icon.png` (128×128) and `logo.png`
+  (250×100) so the App Store tile and add-on detail page show real
+  artwork instead of the placeholder.
+- Restore canonical project ownership in `config.yaml`,
+  `docker-compose.example.yml`, and `README.md` (GitHub URL, install
+  badge, and GHCR image references point back to `sandervg`). Fixed the
+  Docker image name in the compose example to match the name actually
+  published by the GHCR workflow (`bose-soundtouch-bridge`).
+
 ## 1.8.2
 
 - **Improved Button Reliability**: Added a state reset (1s delay) for `last_preset` sensor. This ensures that pressing the same physical button multiple times in a row will always trigger Home Assistant automations.
