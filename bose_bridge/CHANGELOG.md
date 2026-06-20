@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.8.4
+
+- **Properly fix the add-on build failure (#7).** Bumped `upnpclient`
+  from `1.0.3` to `2.0.3`. The old version pinned `lxml<5`, which forced
+  pip to compile lxml 4.9.4 from source on the current HA base image
+  (Python 3.14, no C toolchain) and failed. `upnpclient 2.0.3` allows
+  `lxml>=4.6.0`, so the prebuilt `py3-lxml` from apk satisfies it — no
+  compilation, no build tools, fast builds on ARM. This supersedes the
+  build-deps workaround from 1.8.3 (now removed from both Dockerfiles).
+- **Support speakers that don't serve the description at the default
+  path (#4).** Some models (e.g. SoundTouch 10) return 404 for the
+  conventional `/XD/BO5EBO5E-F00D-F00D-FEED-<deviceID>.xml` URL. When
+  that happens the bridge now falls back to locating the UPnP
+  MediaRenderer description over SSDP and uses the one that actually
+  exposes AVTransport. The fast path is unchanged for models that work.
+
 ## 1.8.3
 
 - **Fix add-on build failure** reported by a user on the latest Home

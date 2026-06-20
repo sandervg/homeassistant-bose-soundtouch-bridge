@@ -106,13 +106,87 @@ def fetch_speaker_info(host: str) -> tuple[str, str, str]:
     return device_id, friendly, model
 
 
+def discover_description_url(host: str, timeout: float = 3.0) -> str | None:
+    """SSDP M-SEARCH for a UPnP MediaRenderer on ``host``, returning the
+    description URL that actually exposes AVTransport.
+
+    Fallback for speaker models (e.g. SoundTouch 10) whose description
+    document does not live at the conventional
+    ``/XD/BO5EBO5E-F00D-F00D-FEED-<deviceID>.xml`` path.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(timeout)
+    candidates: list[str] = []
+    try:
+        for st in (
+            "urn:schemas-upnp-org:device:MediaRenderer:1",
+            "upnp:rootdevice",
+            "ssdp:all",
+        ):
+            msg = (
+                "M-SEARCH * HTTP/1.1\r\n"
+                f"HOST: {SSDP_ADDR[0]}:{SSDP_ADDR[1]}\r\n"
+                'MAN: "ssdp:discover"\r\n'
+                "MX: 2\r\n"
+                f"ST: {st}\r\n\r\n"
+            ).encode()
+            try:
+                s.sendto(msg, SSDP_ADDR)
+            except Exception:
+                continue
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                data, addr = s.recvfrom(4096)
+            except socket.timeout:
+                break
+            if addr[0] != host:
+                continue
+            text = data.decode(errors="ignore")
+            loc = next(
+                (
+                    l.split(": ", 1)[1].strip()
+                    for l in text.split("\r\n")
+                    if l.lower().startswith("location:")
+                ),
+                None,
+            )
+            if loc and loc not in candidates:
+                candidates.append(loc)
+    finally:
+        s.close()
+
+    # Prefer a description that actually exposes AVTransport (the MediaRenderer).
+    for url in candidates:
+        try:
+            desc = urllib.request.urlopen(url, timeout=3).read().decode()
+        except Exception:
+            continue
+        if "AVTransport" in desc:
+            return url
+    return candidates[0] if candidates else None
+
+
 def get_upnp_services(host: str, device_id: str):
     """Return (av_transport, rendering_control) for the given speaker."""
     if upnpclient is None:
         raise ImportError("upnpclient is required for UPnP service discovery")
     desc_url = f"http://{host}:8091/XD/BO5EBO5E-F00D-F00D-FEED-{device_id}.xml"
     print(f"[upnp] description: {desc_url}")
-    d = upnpclient.Device(desc_url)
+    try:
+        d = upnpclient.Device(desc_url)
+    except Exception as e:
+        # Some models (e.g. SoundTouch 10) don't serve the description at the
+        # conventional path — fall back to locating it over SSDP.
+        print(f"[upnp] default description URL failed ({e}); trying SSDP discovery")
+        found = discover_description_url(host)
+        if not found:
+            raise BoseError(
+                f"could not locate a UPnP MediaRenderer description on {host}; "
+                f"the speaker may use a different model layout"
+            )
+        print(f"[upnp] discovered description via SSDP: {found}")
+        d = upnpclient.Device(found)
     av = next(s for s in d.services if "AVTransport" in s.service_id)
     rc = next(s for s in d.services if "RenderingControl" in s.service_id)
     return av, rc

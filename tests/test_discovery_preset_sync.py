@@ -111,6 +111,48 @@ class TestDiscoveryPresetSync(unittest.TestCase):
 
         store_preset.assert_called_once_with("host", 1, "http://stream.example/1", None)
 
+    def test_discover_description_url_returns_avtransport_location(self):
+        loc = "http://10.0.0.5:8200/upnp/desc.xml"
+        responses = [
+            (f"HTTP/1.1 200 OK\r\nLOCATION: {loc}\r\n\r\n".encode(), ("10.0.0.5", 1900)),
+        ]
+        avtransport_desc = b"<root><serviceId>urn:upnp-org:serviceId:AVTransport</serviceId></root>"
+        with patch("bose_bridge.discovery.socket.socket", return_value=DummySocket(responses)), patch(
+            "bose_bridge.discovery.urllib.request.urlopen",
+            return_value=DummyResponse(avtransport_desc),
+        ):
+            found = discovery.discover_description_url("10.0.0.5")
+        self.assertEqual(found, loc)
+
+    def test_discover_description_url_ignores_other_hosts(self):
+        responses = [
+            (b"HTTP/1.1 200 OK\r\nLOCATION: http://9.9.9.9:8200/d.xml\r\n\r\n", ("9.9.9.9", 1900)),
+        ]
+        with patch("bose_bridge.discovery.socket.socket", return_value=DummySocket(responses)):
+            found = discovery.discover_description_url("10.0.0.5")
+        self.assertIsNone(found)
+
+    def test_get_upnp_services_falls_back_to_ssdp_on_404(self):
+        class Svc:
+            def __init__(self, sid):
+                self.service_id = sid
+
+        class Dev:
+            services = [Svc("urn:...:AVTransport"), Svc("urn:...:RenderingControl")]
+
+        def device_side_effect(url):
+            if "BO5EBO5E" in url:
+                raise Exception("404 Not Found")
+            return Dev()
+
+        with patch("bose_bridge.discovery.upnpclient") as upnp, patch.object(
+            discovery, "discover_description_url", return_value="http://10.0.0.5:8200/d.xml"
+        ):
+            upnp.Device.side_effect = device_side_effect
+            av, rc = discovery.get_upnp_services("10.0.0.5", "ABCDEF")
+        self.assertIn("AVTransport", av.service_id)
+        self.assertIn("RenderingControl", rc.service_id)
+
 
 if __name__ == "__main__":
     unittest.main()
