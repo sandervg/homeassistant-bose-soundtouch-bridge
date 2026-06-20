@@ -72,6 +72,15 @@ multicast and reach the speaker's UPnP port.
 | Plain HTTP icecast/MP3 streams | ✅ via local UPnP | ✅ used |
 | Token-protected streams (some commercial radios) | ❌ | ⚠️ needs your own proxy |
 
+## Contributors
+
+- [@sandervg](https://github.com/sandervg) — original author and maintainer.
+- [@kom101](https://github.com/kom101) — multi-speaker support, manual
+  metadata overrides, Home Assistant MQTT status sensors, and the modular
+  package refactor ([#2](https://github.com/sandervg/homeassistant-bose-soundtouch-bridge/pull/2)).
+
+Contributions welcome — open an issue or PR.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
