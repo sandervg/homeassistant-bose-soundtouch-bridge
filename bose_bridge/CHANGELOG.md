@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.1
+
+- **Fix Supervisor add-on build failure on Home Assistant base images
+  that ship Python 3.14 + apk lxml 6.x.** `upnpclient` constrains
+  `lxml<5`, so pip falls back to compiling lxml 4.9.4 from source.
+  Added `libxml2-dev`, `libxslt-dev`, `python3-dev`, `gcc`, `musl-dev`
+  to the Docker build (installed via a virtual apk package and removed
+  at the end so the runtime image stays small). Reported by Tom on the
+  GitHub issue tracker.
+- Add proper add-on branding (`icon.png` + `logo.png`) so the HA App
+  Store tile and add-on detail page show a clean SoundTouch-style
+  speaker mark instead of the default placeholder.
+
 ## 1.5.0
 
 - **Standalone Docker image** for Home Assistant Container / plain
