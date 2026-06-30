@@ -80,7 +80,18 @@ class SpeakerBridge:
 
             entry = self.presets[n]
             url = entry["url"]
-            
+
+            # SoundTouch firmware cannot play TLS streams — SetAVTransportURI
+            # silently drops an https:// URI and Play() then fails with the
+            # cryptic "402 No URI supplied". Warn early with an actionable hint.
+            if url.lower().startswith("https://"):
+                hint = (
+                    f"preset {n} uses an https:// URL, which SoundTouch firmware "
+                    f"does not support. Use the plain http:// stream URL instead."
+                )
+                print(f"[{self.host}] WARNING: {hint}")
+                self._update_ha_status("last_error", hint)
+
             print(f"[{self.host}] playing local preset {n}: {url}")
 
             # Fetch metadata
@@ -98,6 +109,21 @@ class SpeakerBridge:
             print(f"[{self.host}] {e}")
         except Exception as e:
             err = f"play error: {e}"
+            # The 402 almost always means the firmware rejected the URI — most
+            # commonly because it was https://. Make that actionable.
+            if "No URI supplied" in str(e):
+                bad = locals().get("url", "")
+                if isinstance(bad, str) and bad.lower().startswith("https://"):
+                    err = (
+                        "play error: SoundTouch rejected the HTTPS stream URL "
+                        "(402 No URI supplied). SoundTouch firmware only plays "
+                        "plain http:// streams — switch the preset to its http:// URL."
+                    )
+                else:
+                    err = (
+                        f"play error: {e} — the speaker rejected the stream URL. "
+                        f"Check it is a plain http:// direct audio stream."
+                    )
             print(f"[{self.host}] {err}")
             self._update_ha_status("last_error", err)
 
@@ -175,7 +201,7 @@ def main():
     
     # MQTT Setup
     mqtt_pub = MqttPublisher()
-    creds = fetch_mqtt_creds()
+    creds = fetch_mqtt_creds(cfg)
     if creds and websocket:
         import paho.mqtt.client as mqtt
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)

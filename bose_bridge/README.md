@@ -28,6 +28,25 @@ The bridge can be configured in two ways:
 1. **Home Assistant Add-on**: Via the `Configuration` tab in the HA UI.
 2. **Standalone Docker**: Using environment variables like `BOSE_HOST`, `PRESET_1_URL`, etc.
 
+#### Stream URLs must be plain HTTP
+
+SoundTouch firmware **cannot play `https://` streams** — its UPnP renderer
+silently drops a TLS URI and playback fails with `402 No URI supplied`.
+Always use the plain `http://` variant of a station's stream. Most
+broadcasters publish an HTTP endpoint alongside the HTTPS one.
+
+#### MQTT broker (optional)
+
+MQTT enables the Home Assistant button entities and status sensors.
+
+- **Mosquitto add-on**: leave the `mqtt_*` options blank. The add-on
+  auto-discovers the broker from the Supervisor's MQTT service.
+- **External broker (e.g. EMQX)**: set `mqtt_host` (and `mqtt_port`,
+  `mqtt_username`, `mqtt_password` as needed) in the add-on Configuration
+  tab. Explicit settings take precedence over the Supervisor service.
+- **Standalone Docker**: use the `MQTT_HOST`, `MQTT_PORT`,
+  `MQTT_USERNAME`, `MQTT_PASSWORD` environment variables.
+
 ## Usage & Integrations
 
 ### Using Presets as Generic Triggers (Simple Example)

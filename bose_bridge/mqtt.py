@@ -13,8 +13,29 @@ except ImportError:  # pragma: no cover
 from bose_bridge.constants import SUPERVISOR_TOKEN, SUPERVISOR_URL
 
 
-def fetch_mqtt_creds() -> dict | None:
-    """Find MQTT broker credentials from Supervisor or environment."""
+def fetch_mqtt_creds(cfg: dict | None = None) -> dict | None:
+    """Find MQTT broker credentials.
+
+    Resolution order:
+      1. Explicit broker in the add-on/standalone config (``mqtt_host`` etc.).
+         Use this for external brokers like EMQX that aren't wired into the
+         Supervisor's MQTT service.
+      2. The Supervisor's MQTT service (Mosquitto add-on + MQTT integration).
+      3. ``MQTT_*`` environment variables (standalone Docker).
+    """
+    # 1. Explicit config takes precedence.
+    if cfg:
+        host = str(cfg.get("mqtt_host") or "").strip()
+        if host:
+            print(f"[mqtt] using broker from config: {host}")
+            return {
+                "host": host,
+                "port": int(cfg.get("mqtt_port") or 1883),
+                "username": str(cfg.get("mqtt_username") or ""),
+                "password": str(cfg.get("mqtt_password") or ""),
+            }
+
+    # 2. Supervisor-provided broker.
     if SUPERVISOR_TOKEN:
         try:
             req = urllib.request.Request(
@@ -26,6 +47,7 @@ def fetch_mqtt_creds() -> dict | None:
         except Exception as e:
             print(f"[mqtt] supervisor MQTT lookup failed: {e}")
 
+    # 3. Environment variables (standalone Docker).
     host = os.environ.get("MQTT_HOST", "").strip()
     if not host:
         return None

@@ -57,6 +57,34 @@ class TestMqtt(unittest.TestCase):
 
         self.assertEqual(creds, supervisor_data["data"])
 
+    def test_fetch_mqtt_creds_config_takes_precedence_over_supervisor(self):
+        cfg = {
+            "mqtt_host": "emqx.local",
+            "mqtt_port": 1883,
+            "mqtt_username": "bose",
+            "mqtt_password": "pw",
+        }
+        # Even with a Supervisor token present, explicit config wins and no
+        # Supervisor HTTP call is made.
+        with patch.object(mqtt_module, "SUPERVISOR_TOKEN", "token123"), patch(
+            "bose_bridge.mqtt.urllib.request.urlopen",
+            side_effect=AssertionError("supervisor should not be queried"),
+        ):
+            creds = fetch_mqtt_creds(cfg)
+
+        self.assertEqual(creds, {
+            "host": "emqx.local",
+            "port": 1883,
+            "username": "bose",
+            "password": "pw",
+        })
+
+    def test_fetch_mqtt_creds_ignores_blank_config_host(self):
+        # Blank mqtt_host in config must fall through to the next source.
+        with patch.object(mqtt_module, "SUPERVISOR_TOKEN", ""), patch.dict(os.environ, {}, clear=True):
+            creds = fetch_mqtt_creds({"mqtt_host": "   "})
+        self.assertIsNone(creds)
+
     def test_mqtt_publisher_publish_without_client(self):
         publisher = MqttPublisher()
         publisher.publish("topic/test", "payload")  # no client should be safe

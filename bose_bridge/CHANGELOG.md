@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.8.5
+
+- **Configurable MQTT broker for the add-on (#9).** New optional
+  `mqtt_host`, `mqtt_port`, `mqtt_username`, `mqtt_password` options.
+  Set them to use an external broker (e.g. EMQX) that isn't wired into
+  the Supervisor's MQTT service. When left blank, the add-on keeps
+  auto-discovering the Supervisor broker (Mosquitto) as before.
+  Explicit config takes precedence over the Supervisor service, which
+  takes precedence over `MQTT_*` env vars. The add-on's MQTT service
+  dependency is now `want` instead of `need`, so it no longer requires
+  the Mosquitto add-on when you bring your own broker.
+- **Clearer error for HTTPS stream URLs (#8).** SoundTouch firmware
+  cannot play TLS streams: `SetAVTransportURI` silently drops an
+  `https://` URI and `Play` then fails with the cryptic
+  `402 No URI supplied`. The bridge now detects `https://` preset URLs,
+  warns up front, and reports an actionable message (use the plain
+  `http://` stream URL) to the Last Error sensor instead of the raw 402.
+
 ## 1.8.4
 
 - **Properly fix the add-on build failure (#7).** Bumped `upnpclient`
